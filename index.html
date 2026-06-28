@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luminator Horizon</title>
+    <style>
+        * {
+            touch-action: manipulation;
+            margin: 0px;
+            padding: 0px;
+            font-weight: normal;
+            border: none;
+            font-family: arial, sans-serif;
+            color: black;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 2.5px;
+        }
+        p, button, input, select, option, label {
+            font-size: 16px;
+            margin: 2.5px;
+        }
+        th, td {
+            font-size: 18px;
+            text-align: center;
+        }
+        button:not(:has(.sign-canvas)), input, select {
+            border: 1px solid black;
+            border-radius: 5px;
+            padding: 3px 5px;
+        }
+        #sign {
+            border: 1px solid black;
+            background-color: black;
+        }
+        #sign-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            image-rendering: pixelated;
+        }
+        #app {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+        }
+        #header, #controls {
+            display: flex;
+            flex-direction: row;
+        }
+        #controls {
+            overflow-y: auto;
+            gap: 25px;
+            column-rule: 5px dashed black;
+        }
+        #settings {
+            display: flex;
+            flex-direction: column;
+        }
+        #text {
+            flex: 1;
+            table-layout: fixed;
+        }
+        input:invalid {
+            border-color: red;
+            background-color: #ffcccc;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        #text input[type="number"] {
+            width: 3em;
+            -moz-appearance: textfield;
+        }
+        input[type="text"] {
+            width: 100%;
+            min-width: 9em;
+        }
+        input[type="checkbox"] {
+            width: 1em;
+            height: 1em;
+        }
+        #text col:not(:last-child), #settings input {
+            width: 0;
+        }
+        button:has(.sign-canvas) {
+            margin: 0 2.5px;
+            background-color: black;
+        }
+        fieldset {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        fieldset > :last-child {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="header">
+            <h1>Luminator Horizon Editor</h1>
+            <a>View Source</a>
+        </div>
+        <div id="sign-container">
+            <canvas class="sign-canvas" id="sign"></canvas>
+        </div>
+        <div id="controls">
+            <table id="screen">
+                <thead>
+                    <tr>
+                        <th>Screen</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <table id="text">
+                <colgroup><col><col><col><col><col></colgroup>
+                <thead>
+                    <tr>
+                        <th>X</th>
+                        <th>Y</th>
+                        <th>Font</th>
+                        <th>Inv.</th>
+                        <th>Text</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div id="settings">
+                <button id="play">Play&nbsp;Sign</button>
+                <fieldset>
+                    <label for="size">Size:</label>
+                    <select name="size" id="size">
+                        <option value="24x200">24x200</option>
+                        <option value="16x160" selected>16x160</option>
+                        <option value="16x140">16x140</option>
+                        <option value="16x120">16x120</option>
+                        <option value="16x80">16x80</option>
+                        <option value="16x48">16x48</option>
+                        <option value="14x112">14x112</option>
+                        <option value="12x40">12x40</option>
+                        <option value="8x96">8x96</option>
+                        <option value="8x80">8x80</option>
+                        <option value="8x64">8x64</option>
+                    </select>
+                </fieldset>
+                <fieldset>
+                    <label for="color">Color:</label>
+                    <select name="color" id="color">
+                        <option value="amber" selected>Amber</option>
+                        <option value="white">White</option>
+                        <option value="369">369</option>
+                    </select>
+                </fieldset>
+                <br>
+                <fieldset>
+                    <label for="sign-code">Code:</label>
+                    <input type="number" inputmode="numeric" id="sign-code" placeholder="1-9999" min="1" max="9999" pattern="[0-9]{1,4}" required>
+                </fieldset>
+                <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
+                <input type="text" id="name2" placeholder="Name Line 2">
+                <button id="import">Import&nbsp;Sign</button>
+                <button id="export">Export&nbsp;Sign</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let textTableBody = "", screenTableBody = "";
+        for (let i = 1; i <= 8; i++) {
+            textTableBody += `
+                <tr id="row${i}">
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="x${i}" pattern="[0-9]{1,3}" required></td>
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="y${i}" pattern="[0-9]{1,3}" required></td>
+                    <td><select id="font${i}"><option value="16DVW" selected>16DVW</option></select></td>
+                    <td><input type="checkbox" id="invert${i}"></td>
+                    <td><input type="text" id="text${i}"></td>
+                </tr>
+            `;
+            screenTableBody += `
+                <tr>
+                    <td><button id="screen${i}"><canvas class="sign-canvas"></canvas></button></td>
+                </tr>
+            `;
+        }
+        document.querySelector("#text tbody").innerHTML = textTableBody;
+        document.querySelector("#screen tbody").innerHTML = screenTableBody;
+
+        const sign = document.getElementById("sign");
+        const ctx = sign.getContext("2d");
+        let color = "amber"; // Options: amber, white, 369 (last 40 columns dimmer)
+
+        sign.width = 160;
+        sign.height = 160;
+        function resizeSignContainer() {
+            const cw = document.getElementById("sign-container").clientWidth;
+            const ch = document.getElementById("sign-container").clientHeight;
+            const aspectRatio = sign.width / sign.height;
+            if (ch * aspectRatio < cw) {
+                sign.style.width = ch * aspectRatio + "px";
+                sign.style.height = ch + "px";
+            } else {
+                sign.style.width = cw + "px";
+                sign.style.height = cw / aspectRatio + "px";
+            }
+        }
+        window.addEventListener("resize", resizeSignContainer);
+
+        function resizeSign() {
+            const [height, width] = document.getElementById("size").value.split("x").map(Number);
+            [...document.getElementsByClassName("sign-canvas")].forEach((canvas) => {
+                canvas.width = width;
+                canvas.height = height;
+            });
+            resizeSignContainer();
+        }
+        document.getElementById("size").addEventListener("change", resizeSign);
+        resizeSign();
+
+        ctx.fillStyle = "red";
+        ctx.fillRect(1, 1, 5, 5);
+    </script>
+</body>
+</html>
