@@ -20,11 +20,11 @@
             font-weight: bold;
             margin: 2.5px;
         }
-        p, button, input, select, option, label {
+        a, p, button, input, select, option, label {
             font-size: 16px;
             margin: 2.5px;
         }
-        th, td {
+        th, td, #screen p {
             font-size: 18px;
             text-align: center;
         }
@@ -33,8 +33,7 @@
             border-radius: 5px;
             padding: 3px 5px;
         }
-        #sign {
-            border: 1px solid black;
+        .sign-canvas {
             background-color: black;
         }
         #sign-container {
@@ -60,8 +59,18 @@
         }
         #controls {
             overflow-y: auto;
-            gap: 25px;
-            column-rule: 5px dashed black;
+        }
+        #controls[data-playing="true"] {
+            cursor: not-allowed;
+        }
+        #controls[data-playing="true"] :is(button, input, select, label:has(canvas)):not(#play-pause) {
+            pointer-events: none;
+            border-color: red;
+            background-color: #ffcccc;
+        }
+        .vertical-divider {
+            margin: 0 10px;
+            border-left: 5px dashed black;
         }
         #settings {
             display: flex;
@@ -92,41 +101,56 @@
             width: 1em;
             height: 1em;
         }
+        input[type="radio"] {
+            position: absolute;
+            left: -9999px;
+        }
+        input[type="radio"]:checked + label > canvas {
+            height: 75%;
+        }
+        input[type="radio"]:checked + label {
+            border: 2px solid black;
+            display: grid;
+            place-items: center;
+        }
         #text col:not(:last-child), #settings input {
             width: 0;
         }
-        button:has(.sign-canvas) {
-            margin: 0 2.5px;
-            background-color: black;
-        }
-        fieldset {
+        #settings fieldset {
             display: flex;
             flex-direction: row;
             align-items: center;
         }
-        fieldset > :last-child {
+        #settings fieldset :is(input, select, button) {
             flex: 1;
+        }
+        #screen {
+            display: grid;
+            grid-template-rows: min-content repeat(8, 1fr);
+        }
+        label > .sign-canvas {
+            display: block;
+            height: 100%;
         }
     </style>
 </head>
 <body>
     <div id="app">
         <div id="header">
-            <h1>Luminator Horizon Editor</h1>
-            <a>View Source</a>
+            <h1>Luminator&nbsp;Horizon</h1>
+            <span>
+                <a href="https://github.com/CyrilSLi/luminator-web">View Source</a>
+                <a href="https://github.com/CyrilSLi/luminator-web/issues">Report&nbsp;Issue</a>
+            </span>
         </div>
         <div id="sign-container">
             <canvas class="sign-canvas" id="sign"></canvas>
         </div>
         <div id="controls">
-            <table id="screen">
-                <thead>
-                    <tr>
-                        <th>Screen</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div id="screen">
+                <p>Screen</p>
+            </div>
+            <div class="vertical-divider"></div>
             <table id="text">
                 <colgroup><col><col><col><col><col></colgroup>
                 <thead>
@@ -140,8 +164,12 @@
                 </thead>
                 <tbody></tbody>
             </table>
+            <div class="vertical-divider"></div>
             <div id="settings">
-                <button id="play">Play&nbsp;Sign</button>
+                <fieldset>
+                    <button id="play-pause">Play</button>
+                    <button id="clear">Clear</button>
+                </fieldset>
                 <fieldset>
                     <label for="size">Size:</label>
                     <select name="size" id="size">
@@ -173,48 +201,92 @@
                 </fieldset>
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
-                <button id="import">Import&nbsp;Sign</button>
-                <button id="export">Export&nbsp;Sign</button>
+                <fieldset>
+                    <button id="import">Import</button>
+                    <button id="export">Export</button>
+                </fieldset>
             </div>
         </div>
     </div>
     <script>
-        let textTableBody = "", screenTableBody = "";
+        let currentScreen = 1;
+        let playSignInterval = null;
+        let playSignSpeed = 1000;
+
+        const signEl = document.getElementById("sign");
+        const signCtx = signEl.getContext("2d");
+
+        signEl.addEventListener("click", () => {
+            if (!document.fullscreenElement) {
+                signEl.requestFullscreen().catch((err) => {
+                    alert(`Error entering full screen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+
+
+        // will be programmatically generated
+        const fonts = ["5VW", "5DVW", "6VW", "6DVW", "5X7", "7VW", "7DVW", "8VW", "8DVW", "9VW", "9DVW", "10DVW", "11DVW", "12DVW", "13DVW", "14DVW", "15DVW", "16DVW", "16TVW"];
+        const defaultFont = "16DVW";
+
+        let textTableBody = "", screenDivBody = "";
         for (let i = 1; i <= 8; i++) {
             textTableBody += `
-                <tr id="row${i}">
-                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="x${i}" pattern="[0-9]{1,3}" required></td>
-                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="y${i}" pattern="[0-9]{1,3}" required></td>
-                    <td><select id="font${i}"><option value="16DVW" selected>16DVW</option></select></td>
-                    <td><input type="checkbox" id="invert${i}"></td>
-                    <td><input type="text" id="text${i}"></td>
+                <tr id="row-${i}">
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="x-${i}" pattern="[0-9]{1,3}" required></td>
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="y-${i}" pattern="[0-9]{1,3}" required></td>
+                    <td><select id="font-${i}">
+                        ${fonts.map((font) => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}
+                    </select></td>
+                    <td><input type="checkbox" id="invert-${i}"></td>
+                    <td><input type="text" id="text-${i}"></td>
                 </tr>
             `;
-            screenTableBody += `
-                <tr>
-                    <td><button id="screen${i}"><canvas class="sign-canvas"></canvas></button></td>
-                </tr>
+            screenDivBody += `
+                <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
+                <label for="screen-${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
             `;
         }
         document.querySelector("#text tbody").innerHTML = textTableBody;
-        document.querySelector("#screen tbody").innerHTML = screenTableBody;
+        document.querySelector("#screen").innerHTML += screenDivBody;
 
-        const sign = document.getElementById("sign");
-        const ctx = sign.getContext("2d");
-        let color = "amber"; // Options: amber, white, 369 (last 40 columns dimmer)
+        const emptySignData = {
+            size: document.getElementById("size").value,
+            color: document.getElementById("color").value,
+            screens: Array(8).fill(
+                Array(8).fill({
+                    x: 1,
+                    y: 1,
+                    font: defaultFont,
+                    invert: false,
+                    text: ""
+                })
+            )
+        };
+        let signData = JSON.parse(JSON.stringify(emptySignData));
 
-        sign.width = 160;
-        sign.height = 160;
+        function clearSign() {
+            if (confirm("Are you sure you want to clear the sign? This cannot be undone.")) {
+                signData = JSON.parse(JSON.stringify(emptySignData));
+                changeScreen(1);
+                renderSign();
+            }
+        }
+        document.getElementById("clear").addEventListener("click", clearSign);
+
         function resizeSignContainer() {
             const cw = document.getElementById("sign-container").clientWidth;
             const ch = document.getElementById("sign-container").clientHeight;
-            const aspectRatio = sign.width / sign.height;
+            const aspectRatio = signEl.width / signEl.height;
             if (ch * aspectRatio < cw) {
-                sign.style.width = ch * aspectRatio + "px";
-                sign.style.height = ch + "px";
+                signEl.style.width = ch * aspectRatio + "px";
+                signEl.style.height = ch + "px";
             } else {
-                sign.style.width = cw + "px";
-                sign.style.height = cw / aspectRatio + "px";
+                signEl.style.width = cw + "px";
+                signEl.style.height = cw / aspectRatio + "px";
             }
         }
         window.addEventListener("resize", resizeSignContainer);
@@ -229,9 +301,95 @@
         }
         document.getElementById("size").addEventListener("change", resizeSign);
         resizeSign();
+    
+        function changeScreen(screen) {
+            document.getElementById(`screen-${screen}`).checked = true;
+            currentScreen = screen;
+            for (let i = 1; i <= 8; i++) {
+                const lineData = signData.screens[screen - 1][i - 1];
+                document.getElementById(`x-${i}`).value = lineData.x;
+                document.getElementById(`y-${i}`).value = lineData.y;
+                document.getElementById(`font-${i}`).value = lineData.font;
+                document.getElementById(`invert-${i}`).checked = lineData.invert;
+                document.getElementById(`text-${i}`).value = lineData.text;
+            }
+            renderScreen(screen);
+        }
+        document.querySelectorAll('input[name="screen"]').forEach((radio) => {
+            radio.addEventListener("change", changeScreen.bind(null, parseInt(radio.value)));
+        });
 
-        ctx.fillStyle = "red";
-        ctx.fillRect(1, 1, 5, 5);
+        function renderScreen(screen) {
+            if (!Number.isInteger(screen)) {
+                screen = currentScreen;
+            }
+            signCtx.clearRect(0, 0, signEl.width, signEl.height);
+
+            console.log(`Rendering screen ${screen}`);
+
+            // dummy rendering logic
+            signCtx.fillStyle = "#ffffff";
+            signCtx.lineWidth = 1;
+            signCtx.font = "12px Arial";
+            signCtx.textBaseline = "top";
+            signCtx.fillText(signData.screens[screen - 1][0].text, 0, 0);
+
+            const previewCtx = document.getElementById(`preview-${screen}`).getContext("2d");
+            previewCtx.clearRect(0, 0, signEl.width, signEl.height);
+            previewCtx.drawImage(sign, 0, 0);
+        }
+
+        function nextNonEmptyScreen(current) {
+            let nextScreen = (current % 8) + 1;
+            while (!signData.screens[nextScreen - 1].some(line => line.text !== "")) {
+                nextScreen = (nextScreen % 8) + 1;
+            }
+            return nextScreen;
+        }
+        function playPauseSign() {
+            if (playSignInterval) {
+                clearInterval(playSignInterval);
+                playSignInterval = null;
+                document.getElementById("controls").removeAttribute("data-playing");
+                document.getElementById("play-pause").textContent = "Play";
+            } else {
+                if (signData.screens.filter(screen => screen.some(line => line.text !== "")).length < 2) {
+                    alert("Sign must have at least 2 non-empty screens to play.");
+                    return;
+                }
+                document.getElementById("controls").setAttribute("data-playing", "true");
+                changeScreen(nextNonEmptyScreen(8));
+                playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), playSignSpeed);
+                document.getElementById("play-pause").textContent = "Pause";
+            }
+        }
+        document.getElementById("play-pause").addEventListener("click", playPauseSign);
+
+        function renderSign() {
+            for (let i = 0; i < 8; i++) {
+                renderScreen(((currentScreen + i) % 8) + 1);
+            }
+        }
+        renderSign();
+
+        function updateGlobalAttr(attr, value) {
+            signData[attr] = value;
+            renderSign();
+        }
+        document.getElementById("size").addEventListener("change", () => updateGlobalAttr("size", document.getElementById("size").value));
+        document.getElementById("color").addEventListener("change", () => updateGlobalAttr("color", document.getElementById("color").value));
+
+        function updateLineAttr(line, attr, value) {
+            signData.screens[currentScreen - 1][line - 1][attr] = value;
+            renderScreen();
+        }
+        for (let i = 8; i >= 1; i--) {
+            document.getElementById(`x-${i}`).addEventListener("input", () => updateLineAttr(i, "x", parseInt(document.getElementById(`x-${i}`).value)));
+            document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
+            document.getElementById(`font-${i}`).addEventListener("change", () => updateLineAttr(i, "font", document.getElementById(`font-${i}`).value));
+            document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
+            document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
+        }
     </script>
 </body>
 </html>
