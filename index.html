@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luminator Horizon</title>
+    <script src="fonts.js"></script>
     <style>
         * {
             touch-action: manipulation;
@@ -35,6 +36,12 @@
         }
         .sign-canvas {
             background-color: black;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: pixelated;
+        }
+        #sign {
+            box-sizing: border-box;
+            border: 2px solid black;
         }
         #sign-container {
             flex: 1;
@@ -158,7 +165,7 @@
                         <th>X</th>
                         <th>Y</th>
                         <th>Font</th>
-                        <th>Inv.</th>
+                        <th style="color: white; background-color: black;">Inv.</th>
                         <th>Text</th>
                     </tr>
                 </thead>
@@ -167,8 +174,18 @@
             <div class="vertical-divider"></div>
             <div id="settings">
                 <fieldset>
+                    <label for="play-speed">Speed:</label>
+                    <input type="number" inputmode="numeric" id="play-speed" min="1" pattern="\d{1,}" value="1000" required>
+                    <p>ms</p>
+                </fieldset>
+                <fieldset>
                     <button id="play-pause">Play</button>
-                    <button id="clear">Clear</button>
+                    <button id="export-gif">GIF</button>
+                    <button id="clear" style="max-width: fit-content;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16" style="vertical-align: middle;">
+                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
+                        </svg>
+                    </button>
                 </fieldset>
                 <fieldset>
                     <label for="size">Size:</label>
@@ -191,13 +208,20 @@
                     <select name="color" id="color">
                         <option value="amber" selected>Amber</option>
                         <option value="white">White</option>
-                        <option value="369">369</option>
+                        <option value="369" data-allowed-sizes="16x160">369</option>
                     </select>
                 </fieldset>
-                <br>
+                <fieldset>
+                    <label for="shape">Shape:</label>
+                    <select name="shape" id="shape">
+                        <option value="square" selected>Square</option>
+                        <option value="round">Round</option>
+                    </select>
+                </fieldset>
+                <div style="flex: 1;"></div>
                 <fieldset>
                     <label for="sign-code">Code:</label>
-                    <input type="number" inputmode="numeric" id="sign-code" placeholder="1-9999" min="1" max="9999" pattern="[0-9]{1,4}" required>
+                    <input type="number" inputmode="numeric" id="sign-code" placeholder="1-9999" min="1" max="9999" pattern="\d{1,4}" required>
                 </fieldset>
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
@@ -211,14 +235,13 @@
     <script>
         let currentScreen = 1;
         let playSignInterval = null;
-        let playSignSpeed = 1000;
 
         const signEl = document.getElementById("sign");
         const signCtx = signEl.getContext("2d");
 
         signEl.addEventListener("click", () => {
             if (!document.fullscreenElement) {
-                signEl.requestFullscreen().catch((err) => {
+                signEl.requestFullscreen().catch(err => {
                     alert(`Error entering full screen: ${err.message}`);
                 });
             } else {
@@ -226,20 +249,19 @@
             }
         });
 
-
-
-        // will be programmatically generated
-        const fonts = ["5VW", "5DVW", "6VW", "6DVW", "5X7", "7VW", "7DVW", "8VW", "8DVW", "9VW", "9DVW", "10DVW", "11DVW", "12DVW", "13DVW", "14DVW", "15DVW", "16DVW", "16TVW"];
         const defaultFont = "16DVW";
+        const fontCharset = window.fonts.__charset__;
+        delete window.fonts.__charset__;
+        Object.values(window.fonts).forEach(font => font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0)));
 
         let textTableBody = "", screenDivBody = "";
         for (let i = 1; i <= 8; i++) {
             textTableBody += `
                 <tr id="row-${i}">
-                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="x-${i}" pattern="[0-9]{1,3}" required></td>
-                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="y-${i}" pattern="[0-9]{1,3}" required></td>
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="x-${i}" pattern="\d{1,3}" required></td>
+                    <td><input type="number" min="1" max="999" inputmode="numeric" value="1" id="y-${i}" pattern="\d{1,3}" required></td>
                     <td><select id="font-${i}">
-                        ${fonts.map((font) => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}
+                        ${Object.keys(window.fonts).map(font => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}
                     </select></td>
                     <td><input type="checkbox" id="invert-${i}"></td>
                     <td><input type="text" id="text-${i}"></td>
@@ -254,8 +276,8 @@
         document.querySelector("#screen").innerHTML += screenDivBody;
 
         const emptySignData = {
-            size: document.getElementById("size").value,
             color: document.getElementById("color").value,
+            shape: document.getElementById("shape").value,
             screens: Array(8).fill(
                 Array(8).fill({
                     x: 1,
@@ -266,6 +288,7 @@
                 })
             )
         };
+        [emptySignData.height, emptySignData.width] = document.getElementById("size").value.split("x").map(Number);
         let signData = JSON.parse(JSON.stringify(emptySignData));
 
         function clearSign() {
@@ -284,19 +307,22 @@
             if (ch * aspectRatio < cw) {
                 signEl.style.width = ch * aspectRatio + "px";
                 signEl.style.height = ch + "px";
+                signEl.style.borderWidth = (ch * 2 / signEl.height) + "px";
             } else {
                 signEl.style.width = cw + "px";
                 signEl.style.height = cw / aspectRatio + "px";
+                signEl.style.borderWidth = (cw * 2 / signEl.width) + "px";
             }
         }
         window.addEventListener("resize", resizeSignContainer);
 
         function resizeSign() {
-            const [height, width] = document.getElementById("size").value.split("x").map(Number);
-            [...document.getElementsByClassName("sign-canvas")].forEach((canvas) => {
-                canvas.width = width;
-                canvas.height = height;
+            document.querySelectorAll(".sign-canvas:not(#sign-container > .sign-canvas)").forEach(canvas => {
+                canvas.width = signData.width;
+                canvas.height = signData.height;
             });
+            document.querySelector("#sign-container > .sign-canvas").width = signData.width * 6 - 2;
+            document.querySelector("#sign-container > .sign-canvas").height = signData.height * 6 - 2;
             resizeSignContainer();
         }
         document.getElementById("size").addEventListener("change", resizeSign);
@@ -315,9 +341,123 @@
             }
             renderScreen(screen);
         }
-        document.querySelectorAll('input[name="screen"]').forEach((radio) => {
+        document.querySelectorAll('input[name="screen"]').forEach(radio => {
             radio.addEventListener("change", changeScreen.bind(null, parseInt(radio.value)));
         });
+
+        const pixelShapes = {
+            square: [
+                [1, 1, 1, 1],
+                [1, 1, 1, 1],
+                [1, 1, 1, 1],
+                [1, 1, 1, 1]
+            ],
+            round: [
+                [0, 1, 1, 0],
+                [1, 1, 1, 1],
+                [1, 1, 1, 1],
+                [0, 1, 1, 0]
+            ]
+        }
+        function drawPixel(imagePixels, previewPixels, x, y) {
+            console.log(`Drawing pixel at (${x}, ${y})`);
+            if (x < 0 || x >= signData.width || y < 0 || y >= signData.height) {
+                return;
+            }
+            let pixelColor;
+            switch (signData.color) {
+                case "amber":
+                    pixelColor = [255, 127, 0, 255];
+                    break;
+                case "white":
+                    pixelColor = [255, 255, 255, 255];
+                    break;
+                case "369":
+                    pixelColor = x <= 120 ? [255, 255, 255, 255] : [159, 159, 159, 255];
+                    break;
+                default:
+                    pixelColor = [0, 0, 0, 0];
+                    break;
+
+            }
+            for (let row = 0; row < 4; row++) {
+                imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 0]).flat(), ((y * 6 + row) * signEl.width + x * 6) * 4);
+            }
+            previewPixels.set(pixelColor, (y * signData.width + x) * 4);
+        }
+
+        function drawString(imagePixels, previewPixels, font, str, x, y, invert) {
+            if (!font || !str) {
+                return;
+            }
+            const { spacing, height, bitmap, pointers } = window.fonts[font];
+            const colWidth = Math.ceil(height / 8);
+            let col = x;
+
+            for (const [charIndex, char] of [...str].entries()) {
+                if (!fontCharset.includes(char)) {
+                    continue;
+                }
+                const startIndex = pointers[fontCharset.indexOf(char)] * colWidth;
+                const endIndex = (pointers[fontCharset.indexOf(char) + 1] * colWidth) || bitmap.length;
+                for (let i = startIndex; i < endIndex; i += colWidth, col++) {
+                    let charRow = 0;
+                    for (let j = colWidth - 1; j >= 0; j--) {
+                        const byte = bitmap[i + j];
+                        for (let bit = 0; bit < 8 && charRow < height; bit++, charRow++) {
+                            if (((byte & (1 << bit)) > 0) ^ invert) {
+                                drawPixel(imagePixels, previewPixels, col, y + charRow);
+                            }
+                        }
+                    }
+                }
+                if (charIndex < str.length - 1) {
+                    if (invert) {
+                        for (let i = 0; i < spacing; i++) {
+                            for (let j = 0; j < height; j++) {
+                                drawPixel(imagePixels, previewPixels, col + i, y + j);
+                            }
+                        }
+                    }
+                    col += spacing;
+                }
+            }
+            if (invert) {
+                if (font === "12DVW") { // Hardcoded
+                    for (let i = x - 2; i < x; i++) {
+                        for (let j = y; j < y + height; j++) {
+                            drawPixel(imagePixels, previewPixels, i, j);
+                        }
+                    }
+                    for (let i = col; i < col + 2; i++) {
+                        for (let j = y; j < y + height; j++) {
+                            drawPixel(imagePixels, previewPixels, i, j);
+                        }
+                    }
+                    for (let i = x - 2; i < col + 2; i++) {
+                        drawPixel(imagePixels, previewPixels, i, y - 2);
+                        drawPixel(imagePixels, previewPixels, i, y - 1);
+                        drawPixel(imagePixels, previewPixels, i, y + height);
+                        drawPixel(imagePixels, previewPixels, i, y + height + 1);
+                    }
+                } else {
+                    for (let i = x - 4; i < x; i++) {
+                        for (let j = y; j < y + height; j++) {
+                            drawPixel(imagePixels, previewPixels, i, j);
+                        }
+                    }
+                    for (let i = col; i < col + 4; i++) {
+                        for (let j = y; j < y + height; j++) {
+                            drawPixel(imagePixels, previewPixels, i, j);
+                        }
+                    }
+                    for (let i = x - 4; i < col + 4; i++) {
+                        drawPixel(imagePixels, previewPixels, i, y - 1);
+                        drawPixel(imagePixels, previewPixels, i, y + height);
+                    }
+                }
+            }
+        }
 
         function renderScreen(screen) {
             if (!Number.isInteger(screen)) {
@@ -325,18 +465,18 @@
             }
             signCtx.clearRect(0, 0, signEl.width, signEl.height);
 
-            console.log(`Rendering screen ${screen}`);
-
-            // dummy rendering logic
-            signCtx.fillStyle = "#ffffff";
-            signCtx.lineWidth = 1;
-            signCtx.font = "12px Arial";
-            signCtx.textBaseline = "top";
-            signCtx.fillText(signData.screens[screen - 1][0].text, 0, 0);
-
+            const signWidth = signEl.width, signHeight = signEl.height;
             const previewCtx = document.getElementById(`preview-${screen}`).getContext("2d");
-            previewCtx.clearRect(0, 0, signEl.width, signEl.height);
-            previewCtx.drawImage(sign, 0, 0);
+            const previewWidth = previewCtx.canvas.width, previewHeight = previewCtx.canvas.height;
+
+            const signImageData = signCtx.createImageData(signWidth, signHeight);
+            const previewData = previewCtx.createImageData(previewWidth, previewHeight);
+            for (let line = 0; line < 8; line++) {
+                const lineData = signData.screens[screen - 1][line];
+                drawString(signImageData.data, previewData.data, lineData.font, lineData.text, lineData.x - 1, lineData.y - 1, lineData.invert);
+            }
+            signCtx.putImageData(signImageData, 0, 0);
+            previewCtx.putImageData(previewData, 0, 0);
         }
 
         function nextNonEmptyScreen(current) {
@@ -359,7 +499,7 @@
                 }
                 document.getElementById("controls").setAttribute("data-playing", "true");
                 changeScreen(nextNonEmptyScreen(8));
-                playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), playSignSpeed);
+                playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), parseInt(document.getElementById("play-speed").value));
                 document.getElementById("play-pause").textContent = "Pause";
             }
         }
@@ -373,11 +513,27 @@
         renderSign();
 
         function updateGlobalAttr(attr, value) {
-            signData[attr] = value;
+            if (attr === "size") {
+                [signData.height, signData.width] = value.split("x").map(Number);
+                document.querySelectorAll("#color option").forEach(option => {
+                    if (option.dataset.allowedSizes) {
+                        option.disabled = !option.dataset.allowedSizes.split(" ").includes(value);
+                        if (option.disabled && option.selected) {
+                            document.getElementById("color").value = document.querySelector("#color option:not([disabled])").value;
+                        }
+                    } else {
+                        option.disabled = false;
+                    }
+                });
+                resizeSign();
+            } else {
+                signData[attr] = value;
+            }
             renderSign();
         }
-        document.getElementById("size").addEventListener("change", () => updateGlobalAttr("size", document.getElementById("size").value));
-        document.getElementById("color").addEventListener("change", () => updateGlobalAttr("color", document.getElementById("color").value));
+        ["size", "color", "shape"].forEach(attr => {
+            document.getElementById(attr).addEventListener("change", () => updateGlobalAttr(attr, document.getElementById(attr).value));
+        });
 
         function updateLineAttr(line, attr, value) {
             signData.screens[currentScreen - 1][line - 1][attr] = value;
