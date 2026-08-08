@@ -283,7 +283,7 @@
                     <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="y-${i}" required></td>
                     <td><select id="font-${i}">${fontOptions}</select></td>
                     <td><input type="checkbox" id="invert-${i}"></td>
-                    <td><input type="text" id="text-${i}"></td>
+                    <td><input type="text" id="text-${i}" placeholder="Screen 1 Line ${i}"></td>
                 </tr>
             `;
             screenDivBody += `
@@ -357,6 +357,7 @@
                 document.getElementById(`font-${i}`).value = lineData.font;
                 document.getElementById(`invert-${i}`).checked = lineData.invert;
                 document.getElementById(`text-${i}`).value = lineData.text;
+                document.getElementById(`text-${i}`).placeholder = `Screen ${screen} Line ${i}`;
             }
             renderScreen(screen);
         }
