@@ -579,7 +579,9 @@
                     if (option.dataset.allowedSizes) {
                         option.disabled = !option.dataset.allowedSizes.split(" ").includes(value);
                         if (option.disabled && option.selected) {
-                            document.getElementById("color").value = document.querySelector("#color option:not([disabled])").value;
+                            const fallbackColor = document.querySelector("#color option:not([disabled])").value;
+                            document.getElementById("color").value = fallbackColor;
+                            signData.color = fallbackColor;
                         }
                     } else {
                         option.disabled = false;
