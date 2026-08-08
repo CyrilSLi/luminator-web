@@ -18,9 +18,14 @@
             box-sizing: border-box;
         }
         h1 {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: bold;
-            margin: 2.5px;
+            margin: auto 2.5px;
+        }
+        @media screen and (min-width: 480px) {
+            h1 {
+                font-size: 32px;
+            }
         }
         a, p, button, input, select, option, label {
             font-size: 16px;
@@ -64,6 +69,13 @@
         #header, #controls {
             display: flex;
             flex-direction: row;
+        }
+        #header > span {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            margin-left: 5px;
+            flex-wrap: wrap;
         }
         #controls {
             overflow-y: auto;
@@ -145,10 +157,10 @@
 <body>
     <div id="app">
         <div id="header">
-            <h1>Luminator&nbsp;Horizon</h1>
+            <h1>Luminator&reg;&nbsp;Horizon&trade;</h1>
             <span>
-                <a href="https://github.com/CyrilSLi/luminator-web">View Source</a>
-                <a href="https://github.com/CyrilSLi/luminator-web/issues">Report&nbsp;Issue</a>
+                <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
+                <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
             </span>
         </div>
         <div id="sign-container">
