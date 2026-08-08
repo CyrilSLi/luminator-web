@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luminator Horizon</title>
     <script src="fonts.js"></script>
+    <script src="gif.js"></script>
     <style>
         * {
             touch-action: manipulation;
@@ -360,7 +361,6 @@
             ]
         }
         function drawPixel(imagePixels, previewPixels, x, y) {
-            console.log(`Drawing pixel at (${x}, ${y})`);
             if (x < 0 || x >= signData.width || y < 0 || y >= signData.height) {
                 return;
             }
@@ -504,6 +504,43 @@
             }
         }
         document.getElementById("play-pause").addEventListener("click", playPauseSign);
+
+        function exportGif() {
+            if (signData.screens.filter(screen => screen.some(line => line.text !== "")).length < 1) {
+                alert("Sign must have at least 1 non-empty screen to export as GIF.");
+                return;
+            }
+            const gif = new GIF({
+                workers: 2,
+                quality: 1, // Sample every pixel
+                width: signEl.width,
+                height: signEl.height
+            });
+            const delay = parseInt(document.getElementById("play-speed").value);
+            const firstScreen = nextNonEmptyScreen(8);
+
+            changeScreen(firstScreen);
+            while (true) {
+                gif.addFrame(signCtx, { copy: true, delay });
+                changeScreen(nextNonEmptyScreen(currentScreen));
+                if (currentScreen === firstScreen) {
+                    break;
+                }
+            }
+
+            gif.on("finished", blob => {
+                console.log("GIF export finished");
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = URL.createObjectURL(blob);
+                a.download = document.getElementById("sign-code").value || "sign" + ".gif";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
+            gif.render();
+        }
+        document.getElementById("export-gif").addEventListener("click", exportGif);
 
         function renderSign() {
             for (let i = 0; i < 8; i++) {
