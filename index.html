@@ -273,8 +273,10 @@
         const defaultFont = "16DVW";
         const fontCharset = window.fonts.__charset__;
         delete window.fonts.__charset__;
-        Object.values(window.fonts).forEach(font => font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0)));
-        const isFontUppercaseOnly = font => fonts[font].pointers.length > fontCharset.indexOf("Z") && fonts[font].pointers.length <= fontCharset.indexOf("z");
+        Object.values(window.fonts).forEach(font => {
+            font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0));
+            font.upperCaseOnly = font.pointers.length > fontCharset.indexOf("Z") && font.pointers.length <= fontCharset.indexOf("z");
+        });
 
         let textTableBody = "", screenDivBody = "";
         const fontOptions = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true })).map(font => (
@@ -598,21 +600,23 @@
         });
 
         function updateLineAttr(line, attr, value) {
-            signData.screens[currentScreen - 1][line - 1][attr] = value;
+            const lineData = signData.screens[currentScreen - 1][line - 1];
+            if (attr === "text" && fonts[lineData.font].upperCaseOnly) {
+                value = value.toUpperCase();
+                document.getElementById(`text-${line}`).value = value;
+            }
+            lineData[attr] = value;
             renderScreen();
         }
         for (let i = 8; i >= 1; i--) {
             document.getElementById(`x-${i}`).addEventListener("input", () => updateLineAttr(i, "x", parseInt(document.getElementById(`x-${i}`).value)));
             document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
-            document.getElementById(`font-${i}`).addEventListener("change", () => updateLineAttr(i, "font", document.getElementById(`font-${i}`).value));
-            document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
-            document.getElementById(`text-${i}`).addEventListener("input", () => {
-                const textInput = document.getElementById(`text-${i}`);
-                if (isFontUppercaseOnly(signData.screens[currentScreen - 1][i - 1].font)) {
-                    textInput.value = textInput.value.toUpperCase();
-                }
-                updateLineAttr(i, "text", textInput.value);
+            document.getElementById(`font-${i}`).addEventListener("change", () => {
+                updateLineAttr(i, "font", document.getElementById(`font-${i}`).value);
+                updateLineAttr(i, "text", document.getElementById(`text-${i}`).value); // Check for upperCaseOnly after font change
             });
+            document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
+            document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
         }
     </script>
 </body>
