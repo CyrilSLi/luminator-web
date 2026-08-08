@@ -31,6 +31,9 @@
             font-size: 16px;
             margin: 2.5px;
         }
+        select, button {
+            background-color: #efefef;
+        }
         th, td, #screen p {
             font-size: 18px;
             text-align: center;
@@ -266,6 +269,7 @@
         const fontCharset = window.fonts.__charset__;
         delete window.fonts.__charset__;
         Object.values(window.fonts).forEach(font => font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0)));
+        const isFontUppercaseOnly = font => fonts[font].pointers.length > fontCharset.indexOf("Z") && fonts[font].pointers.length <= fontCharset.indexOf("z");
 
         let textTableBody = "", screenDivBody = "";
         for (let i = 1; i <= 8; i++) {
@@ -407,7 +411,7 @@
             let col = x;
 
             for (const [charIndex, char] of [...str].entries()) {
-                if (!fontCharset.includes(char)) {
+                if (!fontCharset.slice(0, pointers.length).includes(char)) {
                     continue;
                 }
                 const startIndex = pointers[fontCharset.indexOf(char)] * colWidth;
@@ -434,7 +438,7 @@
                     col += spacing;
                 }
             }
-            if (invert) {
+            if (invert && col > x) {
                 if (font === "12DVW") { // Hardcoded
                     for (let i = x - 2; i < x; i++) {
                         for (let j = y; j < y + height; j++) {
@@ -593,7 +597,13 @@
             document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
             document.getElementById(`font-${i}`).addEventListener("change", () => updateLineAttr(i, "font", document.getElementById(`font-${i}`).value));
             document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
-            document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
+            document.getElementById(`text-${i}`).addEventListener("input", () => {
+                const textInput = document.getElementById(`text-${i}`);
+                if (isFontUppercaseOnly(signData.screens[currentScreen - 1][i - 1].font)) {
+                    textInput.value = textInput.value.toUpperCase();
+                }
+                updateLineAttr(i, "text", textInput.value);
+            });
         }
     </script>
 </body>
