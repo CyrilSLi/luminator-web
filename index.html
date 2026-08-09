@@ -463,7 +463,7 @@
 
             }
             for (let row = 0; row < 4; row++) {
-                imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 0]).flat(), ((y * 6 + row) * signEl.width + x * 6) * 4);
+                imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 255]).flat(), ((y * 6 + row) * signEl.width + x * 6) * 4);
             }
             previewPixels.set(pixelColor, (y * signData.width + x) * 4);
         }
