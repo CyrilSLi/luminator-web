@@ -226,7 +226,7 @@
                     <label for="size">Size:</label>
                     <select name="size" id="size">
                         <option value="24x200">24x200</option>
-                        <option value="16x160" selected>16x160</option>
+                        <option value="16x160">16x160</option>
                         <option value="16x140">16x140</option>
                         <option value="16x120">16x120</option>
                         <option value="16x80">16x80</option>
@@ -241,7 +241,7 @@
                 <fieldset>
                     <label for="color">Color:</label>
                     <select name="color" id="color">
-                        <option value="amber" selected>Amber</option>
+                        <option value="amber">Amber</option>
                         <option value="white">White</option>
                         <option value="369" data-allowed-sizes="16x160">369</option>
                     </select>
@@ -249,7 +249,7 @@
                 <fieldset>
                     <label for="shape">Shape:</label>
                     <select name="shape" id="shape">
-                        <option value="square" selected>Square</option>
+                        <option value="square">Square</option>
                         <option value="round">Round</option>
                     </select>
                 </fieldset>
@@ -261,15 +261,15 @@
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
                 <fieldset>
-                    <button id="export" class="icon-button" title="Export to file">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
-                            <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708"/>
-                        </svg>
-                    </button>
                     <input type="file" id="import-file" accept=".txt" style="display: none;">
                     <button id="import" class="icon-button" title="Import from file">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-arrow-up-fill" viewBox="0 0 16 16">
                             <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M6.354 9.854a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 8.707V12.5a.5.5 0 0 1-1 0V8.707z"/>
+                        </svg>
+                    </button>
+                    <button id="export" class="icon-button" title="Export to file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
+                            <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708"/>
                         </svg>
                     </button>
                     <button id="share">Share</button>
@@ -280,9 +280,10 @@
     <script>
         let currentScreen = 1;
         let playSignInterval = null;
+        let signPos;
 
         const signEl = document.getElementById("sign");
-        const signCtx = signEl.getContext("2d");
+        const signCtx = signEl.getContext("2d", { willReadFrequently: true });
         signCtx.fillStyle = "black";
 
         signEl.addEventListener("click", () => {
@@ -340,33 +341,38 @@
         document.querySelector("#text tbody").innerHTML = textTableBody;
         document.querySelector("#screen").innerHTML += screenDivBody;
 
-        const emptySignData = () => JSON.parse(JSON.stringify({
-            width: 160,
-            height: 16,
-            color: document.getElementById("color").value,
-            shape: document.getElementById("shape").value,
-            screens: Array(8).fill(
-                Array(8).fill({
-                    x: 1,
-                    y: 1,
-                    font: defaultFont,
-                    invert: false,
-                    text: ""
-                })
-            )
-        }));
-        let signData = emptySignData();
+        let signData;
+        const emptySignData = () => {
+            signData = JSON.parse(JSON.stringify({
+                screens: Array(8).fill(
+                    Array(8).fill({
+                        x: 1,
+                        y: 1,
+                        font: defaultFont,
+                        invert: false,
+                        text: ""
+                    })
+                )
+            }));
+            document.getElementById("size").value = "16x160";
+            updateGlobalAttr("size", "16x160");
+            document.getElementById("color").value = "amber";
+            updateGlobalAttr("color", "amber");
+            document.getElementById("shape").value = "square";
+            updateGlobalAttr("shape", "square");
+            ["sign-code", "name1", "name2"].forEach(id => document.getElementById(id).value = "");
+        };
+        emptySignData();
 
         function clearSign() {
             if (confirm("Are you sure you want to clear the sign? This cannot be undone.")) {
-                signData = emptySignData();
+                emptySignData();
                 changeScreen(1);
                 renderSign();
             }
         }
         document.getElementById("clear").addEventListener("click", clearSign);
 
-        let signPos;
         function resizeSignContainer() {
             const cw = document.getElementById("sign-container").clientWidth;
             const ch = document.getElementById("sign-container").clientHeight;
@@ -845,10 +851,6 @@
                 alert("ERROR: Invalid file type. Please select a .txt file.");
                 return;
             }
-            const signCode = file.name.match(/^\d{1,4}.txt$/);
-            if (signCode) {
-                document.getElementById("sign-code").value = parseInt(signCode[0]);
-            }
             const reader = new FileReader();
             reader.onload = e => {
                 const lines = e.target.result.split(/\r?\n/).map(line => line.trim()).filter(line => line !== "");
@@ -856,8 +858,11 @@
                     alert("ERROR: Invalid sign data file.");
                     return;
                 }
-                document.getElementById("size").value = "16x160"; // Hardcoded because file format doesn't store size
-                updateGlobalAttr("size", "16x160");
+                emptySignData();
+                const signCode = file.name.match(/^\d{1,4}.txt$/);
+                if (signCode) {
+                    document.getElementById("sign-code").value = parseInt(signCode[0]);
+                }
                 document.getElementById("name1").value = unEsc(lines[0]);
                 document.getElementById("name2").value = unEsc(lines[1]);
                 for (let screen = 0; screen < 8; screen++) {
