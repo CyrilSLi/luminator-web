@@ -183,7 +183,7 @@
                 <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
                 <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
             </span>
-            <p id="mouse-pos">Pixel:&nbsp;(<span id="mouse-x">999</span>,&nbsp;<span id="mouse-y">999</span>)</p>
+            <p id="mouse-pos">Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
         </div>
         <div id="sign-container">
             <canvas class="sign-canvas" id="sign"></canvas>
@@ -210,13 +210,13 @@
             <div id="settings">
                 <fieldset>
                     <label for="play-speed">Speed:</label>
-                    <input type="number" inputmode="numeric" id="play-speed" min="1" pattern="\d{1,}" value="1000" required>
+                    <input type="number" inputmode="numeric" id="play-speed" min="1" max="30000" value="1000" required>
                     <p>ms</p>
                 </fieldset>
                 <fieldset>
                     <button id="play-pause">Play</button>
                     <button id="export-gif">GIF</button>
-                    <button id="clear" class="icon-button">
+                    <button id="clear" class="icon-button" title="Clear sign data">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
                         </svg>
@@ -261,13 +261,17 @@
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
                 <fieldset>
-                    <button id="import">Load</button>
-                    <button id="export">Save</button>
-                    <button id="share" class="icon-button">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share-fill" viewBox="0 0 16 16">
-                            <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/>
+                    <!-- <button id="import" class="icon-button" title="Import from file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
+                            <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708"/>
                         </svg>
                     </button>
+                    <button id="export" class="icon-button" title="Export to file">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-arrow-up-fill" viewBox="0 0 16 16">
+                            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M6.354 9.854a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 8.707V12.5a.5.5 0 0 1-1 0V8.707z"/>
+                        </svg>
+                    </button> TODO: Implement file import and export -->
+                    <button id="share">Share</button>
                 </fieldset>
             </div>
         </div>
@@ -316,22 +320,20 @@
         });
 
         let textTableBody = "", screenDivBody = "";
-        const fontOptions = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true })).map(font => (
-            `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`
-        )).join("");
+        const sortedFonts = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true }));
         for (let i = 1; i <= 8; i++) {
             textTableBody += `
                 <tr id="row-${i}">
                     <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="x-${i}" required></td>
                     <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="y-${i}" required></td>
-                    <td><select id="font-${i}">${fontOptions}</select></td>
-                    <td><input type="checkbox" id="invert-${i}"></td>
+                    <td><select id="font-${i}">${sortedFonts.map(font => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}</select></td>
+                    <td><input type="checkbox" id="invert-${i}" title="Invert text"></td>
                     <td><input type="text" id="text-${i}" placeholder="Screen 1 Line ${i}"></td>
                 </tr>
             `;
             screenDivBody += `
                 <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
-                <label for="screen-${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
+                <label for="screen-${i}" title="Switch to screen ${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
             `;
         }
         document.querySelector("#text tbody").innerHTML = textTableBody;
@@ -666,8 +668,152 @@
             document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
         }
 
-        function serializeString() {
-            // pass
+        const serializationVersion = 1; // TODO: Increment after changing serialization format
+        class Serializer {
+            constructor() {
+                this.data = [serializationVersion];
+            }
+            boolean(value) {
+                this.data.push(value ? 1 : 0);
+            }
+            uint8(value) {
+                this.data.push(value & 0xFF);
+            }
+            int16(value) {
+                this.data.push((value >> 8) & 0xFF, value & 0xFF);
+            }
+            string(value) {
+                this.uint8(value.length);
+                this.data.push(...value.split("").map(c => c.charCodeAt(0)));
+            }
+            select(id) {
+                this.uint8(document.getElementById(id).selectedIndex);
+            }
+            async serialize() {
+                const data = Uint8Array.from(this.data);
+                return new Response(
+                    new ReadableStream({
+                        start(controller) {
+                            controller.enqueue(data);
+                            controller.close();
+                        }
+                    }).pipeThrough(new CompressionStream("deflate"))
+                ).arrayBuffer().then(buffer => {
+                    const array = new Uint8Array(buffer);
+                    let base64 = "";
+                    for (let i = 0; i < array.length; i++) {
+                        base64 += String.fromCharCode(array[i]);
+                    }
+                    base64 = btoa(base64);
+                    return base64.replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+                });
+            }
+        }
+        class Deserializer {
+            constructor(data) {
+                this.data = data;
+                this.offset = 0;
+                this.versionValid = this.uint8() === serializationVersion;
+            }
+            static async deserialize(base64) {
+                base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
+                base64 += "=".repeat((4 - base64.length % 4) % 4);
+                base64 = atob(base64);
+                const array = new Uint8Array(base64.length);
+                for (let i = 0; i < base64.length; i++) {
+                    array[i] = base64.charCodeAt(i);
+                }
+                return new Deserializer(
+                    await new Response(
+                        new ReadableStream({
+                            start(controller) {
+                                controller.enqueue(array);
+                                controller.close();
+                            }
+                        }).pipeThrough(new DecompressionStream("deflate"))
+                    ).arrayBuffer().then(buffer => new Uint8Array(buffer))
+                );
+            }
+            boolean() {
+                return this.uint8() === 1;
+            }
+            uint8() {
+                return this.data[this.offset++];
+            }
+            int16() {
+                return ((this.data[this.offset++] << 8) | this.data[this.offset++]) << 16 >> 16;
+            }
+            string() {
+                const length = this.uint8();
+                const value = String.fromCharCode(...this.data.slice(this.offset, this.offset + length));
+                this.offset += length;
+                return value;
+            }
+            select(id) {
+                document.getElementById(id).selectedIndex = this.uint8();
+            }
+        }
+
+        async function serializeSign() {
+            const ser = new Serializer();
+            ser.int16(document.getElementById("play-speed").value);
+            ser.select("size");
+            ser.select("color");
+            ser.select("shape");
+            ser.int16(document.getElementById("sign-code").value || 0);
+            ser.string(document.getElementById("name1").value);
+            ser.string(document.getElementById("name2").value);
+            signData.screens.forEach(screen => {
+                screen.forEach(line => {
+                    ser.int16(line.x);
+                    ser.int16(line.y);
+                    ser.uint8(sortedFonts.indexOf(line.font));
+                    ser.boolean(line.invert);
+                    ser.string(line.text);
+                });
+            });
+            return ser.serialize();
+        }
+        async function deserializeSign(base64) {
+            const des = await Deserializer.deserialize(base64);
+            if (!des.versionValid) {
+                alert("Error: Invalid sign data version.");
+                return;
+            }
+            document.getElementById("play-speed").value = des.int16();
+            document.getElementById("size").selectedIndex = des.uint8();
+            updateGlobalAttr("size", document.getElementById("size").value);
+            document.getElementById("color").selectedIndex = des.uint8();
+            updateGlobalAttr("color", document.getElementById("color").value);
+            document.getElementById("shape").selectedIndex = des.uint8();
+            updateGlobalAttr("shape", document.getElementById("shape").value);
+            document.getElementById("sign-code").value = des.int16() || "";
+            document.getElementById("name1").value = des.string();
+            document.getElementById("name2").value = des.string();
+            for (let screen = 0; screen < 8; screen++) {
+                for (let line = 0; line < 8; line++) {
+                    signData.screens[screen][line].x = des.int16();
+                    signData.screens[screen][line].y = des.int16();
+                    signData.screens[screen][line].font = sortedFonts[des.uint8()];
+                    signData.screens[screen][line].invert = des.boolean();
+                    signData.screens[screen][line].text = des.string();
+                }
+            }
+            changeScreen(1);
+            renderSign();
+        }
+
+        const pageUrl = new URL(window.location.href);
+        document.getElementById("share").addEventListener("click", async () => {
+            await pageUrl.searchParams.set("data", await serializeSign());
+            navigator.clipboard.writeText(pageUrl.href).then(() => {
+                alert("Share link copied to clipboard!\nWARNING: Share links are currently unstable and may break any time.");
+            });
+        });
+        if (pageUrl.searchParams.has("data")) {
+            deserializeSign(pageUrl.searchParams.get("data"));
+            pageUrl.searchParams.delete("data");
+            window.history.replaceState({}, "", pageUrl.href);
         }
     </script>
 </body>
