@@ -1,4 +1,4 @@
-import argparse, base64, csv, json, os
+import argparse, base64, csv, json, os, re
 
 parser = argparse.ArgumentParser(description="Extract font bitmaps from a CSV file extracted from a Luminator IPS project.")
 parser.add_argument("csv_file", help="Path to the CSV file containing font data.")
@@ -59,9 +59,13 @@ with open(args.csv_file, encoding="latin-1", newline="") as f:
         else:
             truncated_data = data[index : index + clean_pointers[-1] * col_width]
             clean_pointers.pop() # Remove the last pointer for the end of the truncated data (if there are more characters than in the charset)
+            if (int(re.search(r"\d+", font["FontFile"]).group()) >= 10): # TODO: Find a better way to determine font spacing
+                spacing = 2
+            else:
+                spacing = 1
             output_fonts[font_name_repl.get(font["FontFile"], font["FontFile"]).upper().removesuffix(".FNT")] = {
                 "height": font_height,
-                "spacing": int(font["FontWidth"]),
+                "spacing": spacing,
                 "pointers": clean_pointers,
                 "bitmap": base64.b64encode(truncated_data).decode("utf-8"),
             }
