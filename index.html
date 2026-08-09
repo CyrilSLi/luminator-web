@@ -659,7 +659,11 @@
             const lineData = signData.screens[currentScreen - 1][line - 1];
             if (attr === "text" && fonts[lineData.font].upperCaseOnly) {
                 value = value.toUpperCase();
-                document.getElementById(`text-${line}`).value = value;
+                const textInput = document.getElementById(`text-${line}`);
+                const cursorPos = textInput.selectionStart;
+                textInput.value = value;
+                textInput.focus();
+                textInput.setSelectionRange(cursorPos, cursorPos);
             }
             lineData[attr] = value;
             renderScreen();
