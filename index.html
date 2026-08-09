@@ -261,16 +261,17 @@
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
                 <fieldset>
-                    <!-- <button id="import" class="icon-button" title="Import from file">
+                    <button id="export" class="icon-button" title="Export to file">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cloud-arrow-down-fill" viewBox="0 0 16 16">
                             <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 6.854-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 1 1 .708-.708L7.5 9.293V5.5a.5.5 0 0 1 1 0v3.793l1.146-1.147a.5.5 0 0 1 .708.708"/>
                         </svg>
                     </button>
-                    <button id="export" class="icon-button" title="Export to file">
+                    <input type="file" id="import-file" accept=".txt" style="display: none;">
+                    <button id="import" class="icon-button" title="Import from file">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-arrow-up-fill" viewBox="0 0 16 16">
                             <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M6.354 9.854a.5.5 0 0 1-.708-.708l2-2a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 8.707V12.5a.5.5 0 0 1-1 0V8.707z"/>
                         </svg>
-                    </button> TODO: Implement file import and export -->
+                    </button>
                     <button id="share">Share</button>
                 </fieldset>
             </div>
@@ -339,7 +340,9 @@
         document.querySelector("#text tbody").innerHTML = textTableBody;
         document.querySelector("#screen").innerHTML += screenDivBody;
 
-        const emptySignData = {
+        const emptySignData = () => JSON.parse(JSON.stringify({
+            width: 160,
+            height: 16,
             color: document.getElementById("color").value,
             shape: document.getElementById("shape").value,
             screens: Array(8).fill(
@@ -351,13 +354,12 @@
                     text: ""
                 })
             )
-        };
-        [emptySignData.height, emptySignData.width] = document.getElementById("size").value.split("x").map(Number);
-        let signData = JSON.parse(JSON.stringify(emptySignData));
+        }));
+        let signData = emptySignData();
 
         function clearSign() {
             if (confirm("Are you sure you want to clear the sign? This cannot be undone.")) {
-                signData = JSON.parse(JSON.stringify(emptySignData));
+                signData = emptySignData();
                 changeScreen(1);
                 renderSign();
             }
@@ -603,7 +605,6 @@
             }
 
             gif.on("finished", blob => {
-                console.log("GIF export finished");
                 const a = document.createElement("a");
                 a.style.display = "none";
                 a.href = URL.createObjectURL(blob);
@@ -815,6 +816,67 @@
             pageUrl.searchParams.delete("data");
             window.history.replaceState({}, "", pageUrl.href);
         }
+
+        function exportFile() {
+            const esc = str => `"${str.replaceAll('"', '\\"')}"`;
+            let fileStr = esc(document.getElementById("name1").value) + "\n" + esc(document.getElementById("name2").value);
+            for (let screen = 0; screen < 8; screen++) {
+                for (let line = 0; line < 8; line++) {
+                    const lineData = signData.screens[screen][line];
+                    fileStr += `\n${esc(lineData.text)},${lineData.x},${lineData.y},${esc(lineData.font)},${lineData.invert ? 1 : 0}`;
+                }
+            }
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = URL.createObjectURL(new Blob([fileStr], { type: "text/plain;charset=utf-8" }));
+            a.download = document.getElementById("sign-code").value || "sign" + ".txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        document.getElementById("export").addEventListener("click", exportFile);
+
+        function importFile() {
+            const unEsc = str => str.slice(1, -1).replaceAll('\\"', '"');
+            const file = document.getElementById("import-file").files[0];
+            if (!file) {
+                return;
+            } else if (file.type !== "text/plain" || !file.name.endsWith(".txt")) {
+                alert("ERROR: Invalid file type. Please select a .txt file.");
+                return;
+            }
+            const signCode = file.name.match(/^\d{1,4}.txt$/);
+            if (signCode) {
+                document.getElementById("sign-code").value = parseInt(signCode[0]);
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                const lines = e.target.result.split(/\r?\n/).map(line => line.trim()).filter(line => line !== "");
+                if (lines.length !== 66) {
+                    alert("ERROR: Invalid sign data file.");
+                    return;
+                }
+                document.getElementById("size").value = "16x160"; // Hardcoded because file format doesn't store size
+                updateGlobalAttr("size", "16x160");
+                document.getElementById("name1").value = unEsc(lines[0]);
+                document.getElementById("name2").value = unEsc(lines[1]);
+                for (let screen = 0; screen < 8; screen++) {
+                    for (let line = 0; line < 8; line++) {
+                        const lineData = lines[2 + screen * 8 + line].split(",");
+                        signData.screens[screen][line].text = unEsc(lineData[0]);
+                        signData.screens[screen][line].x = parseInt(lineData[1]);
+                        signData.screens[screen][line].y = parseInt(lineData[2]);
+                        signData.screens[screen][line].font = sortedFonts.includes(unEsc(lineData[3])) ? unEsc(lineData[3]) : defaultFont;
+                        signData.screens[screen][line].invert = lineData[4] === "1";
+                    }
+                }
+                changeScreen(1);
+                renderSign();
+            }
+            reader.readAsText(file);
+        }
+        document.getElementById("import").addEventListener("click", () => document.getElementById("import-file").click());
+        document.getElementById("import-file").addEventListener("change", importFile);
     </script>
 </body>
 </html>
