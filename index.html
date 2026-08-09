@@ -777,7 +777,7 @@
         async function deserializeSign(base64) {
             const des = await Deserializer.deserialize(base64);
             if (!des.versionValid) {
-                alert("Error: Invalid sign data version.");
+                alert("ERROR: Invalid share link version.");
                 return;
             }
             document.getElementById("play-speed").value = des.int16();
@@ -807,7 +807,7 @@
         document.getElementById("share").addEventListener("click", async () => {
             await pageUrl.searchParams.set("data", await serializeSign());
             navigator.clipboard.writeText(pageUrl.href).then(() => {
-                alert("Share link copied to clipboard!\nWARNING: Share links are currently unstable and may break any time.");
+                alert("Share link copied to clipboard!\nWARNING: Share links are currently unstable and may break at any time.");
             });
         });
         if (pageUrl.searchParams.has("data")) {
