@@ -79,12 +79,18 @@
             display: flex;
             flex-direction: row;
         }
+        #header {
+            align-items: center;
+        }
         #header > span {
             display: inline-flex;
             flex-direction: row;
-            align-items: center;
             margin-left: 5px;
             flex-wrap: wrap;
+        }
+        #mouse-pos {
+            margin-left: auto;
+            display: none;
         }
         #controls {
             overflow-y: auto;
@@ -161,6 +167,12 @@
             display: block;
             height: 100%;
         }
+        .icon-button {
+            max-width: fit-content;
+        }
+        .icon-button > svg {
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -171,6 +183,7 @@
                 <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
                 <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
             </span>
+            <p id="mouse-pos">Pixel:&nbsp;(<span id="mouse-x">999</span>,&nbsp;<span id="mouse-y">999</span>)</p>
         </div>
         <div id="sign-container">
             <canvas class="sign-canvas" id="sign"></canvas>
@@ -203,8 +216,8 @@
                 <fieldset>
                     <button id="play-pause">Play</button>
                     <button id="export-gif">GIF</button>
-                    <button id="clear" style="max-width: fit-content;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16" style="vertical-align: middle;">
+                    <button id="clear" class="icon-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
                         </svg>
                     </button>
@@ -248,8 +261,13 @@
                 <input type="text" id="name1" placeholder="Name Line 1" pattern="[A-Za-z0-9 !@#$%^&*\(\)\-_=+\[\{\]\}\\\|;:&apos;&quot;,&lt;.&gt;\/?`~]+" required>
                 <input type="text" id="name2" placeholder="Name Line 2">
                 <fieldset>
-                    <button id="import">Import</button>
-                    <button id="export">Export</button>
+                    <button id="import">Load</button>
+                    <button id="export">Save</button>
+                    <button id="share" class="icon-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share-fill" viewBox="0 0 16 16">
+                            <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5"/>
+                        </svg>
+                    </button>
                 </fieldset>
             </div>
         </div>
@@ -270,6 +288,23 @@
             } else {
                 document.exitFullscreen();
             }
+        });
+
+        function showMousePox(ev) {
+            const x = (ev.clientX - signPos.left) / signPos.width * signEl.width;
+            const y = (ev.clientY - signPos.top) / signPos.height * signEl.height;
+            document.getElementById("mouse-x").textContent = Math.max(1, Math.min(Math.floor((x + 1) / 6) + 1, signData.width));
+            document.getElementById("mouse-y").textContent = Math.max(1, Math.min(Math.floor((y + 1) / 6) + 1, signData.height));
+        }
+        signEl.addEventListener("mouseenter", () => {
+            if (window.matchMedia("(min-width: 700px)").matches) {
+                document.getElementById("mouse-pos").style.display = "block";
+                signEl.addEventListener("mousemove", showMousePox);
+            }
+        });
+        signEl.addEventListener("mouseleave", () => {
+            document.getElementById("mouse-pos").style.display = "none";
+            signEl.removeEventListener("mousemove", showMousePox);
         });
 
         const defaultFont = "16DVW";
@@ -327,18 +362,28 @@
         }
         document.getElementById("clear").addEventListener("click", clearSign);
 
+        let signPos;
         function resizeSignContainer() {
             const cw = document.getElementById("sign-container").clientWidth;
             const ch = document.getElementById("sign-container").clientHeight;
             const aspectRatio = signEl.width / signEl.height;
+            let borderWidth;
             if (ch * aspectRatio < cw) {
                 signEl.style.width = ch * aspectRatio + "px";
                 signEl.style.height = ch + "px";
-                signEl.style.borderWidth = (ch * 2 / signEl.height) + "px";
+                borderWidth = Math.round(ch * 2 / signEl.height);
             } else {
                 signEl.style.width = cw + "px";
                 signEl.style.height = cw / aspectRatio + "px";
-                signEl.style.borderWidth = (cw * 2 / signEl.width) + "px";
+                borderWidth = Math.round(cw * 2 / signEl.width);
+            }
+            signEl.style.borderWidth = borderWidth + "px";
+            const rect = signEl.getBoundingClientRect();
+            signPos = {
+                left: rect.left + borderWidth,
+                top: rect.top + borderWidth,
+                width: signEl.clientWidth,
+                height: signEl.clientHeight
             }
         }
         window.addEventListener("resize", resizeSignContainer);
@@ -619,6 +664,10 @@
             });
             document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
             document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
+        }
+
+        function serializeString() {
+            // pass
         }
     </script>
 </body>
