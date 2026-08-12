@@ -163,7 +163,7 @@
         #text col:not(:last-child), #settings input {
             width: 0;
         }
-        #settings fieldset {
+        fieldset {
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -184,6 +184,15 @@
         }
         .icon-button > svg {
             vertical-align: middle;
+        }
+        dialog {
+            margin: auto;
+            padding: 10px;
+            border-radius: 10px;
+            width: calc(100% - 20px);
+        }
+        dialog::backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
@@ -289,12 +298,26 @@
             </div>
         </div>
     </div>
+    <dialog id="share-dialog">
+        <fieldset>
+            <button id="copy-share-url">Copy</button>
+            <p>&nbsp;Share link:</p>
+        </fieldset>
+        <input type="text" id="share-url" readonly>
+        <fieldset>
+            <button id="copy-embed-code">Copy</button>
+            <p>&nbsp;Embed code:</p>
+        </fieldset>
+        <input type="text" id="embed-code" readonly>
+        <button id="close-share" style="width: 100%;">Close</button>
+    </dialog>
     <script>
         let currentScreen = 1;
         let playSignInterval = null;
         let signPos;
 
         const pageUrl = new URL(window.location.href);
+        const shareDialog = document.getElementById("share-dialog");
         const isEmbedded = pageUrl.searchParams.has("embed");
         const signEl = document.getElementById("sign");
         const signCtx = signEl.getContext("2d", { willReadFrequently: true });
@@ -385,8 +408,8 @@
         if (isEmbedded) {
             document.body.classList.add("embedded");
             pageUrl.searchParams.delete("embed");
-            playPauseSign();
             const linkWrapper = document.createElement("a");
+            linkWrapper.rel = "noopener noreferrer";
             linkWrapper.href = pageUrl.href;
             linkWrapper.target = "_blank";
             signEl.parentNode.insertBefore(linkWrapper, signEl);
@@ -841,19 +864,32 @@
             }
             changeScreen(1);
             renderSign();
+            if (isEmbedded) {
+                playPauseSign();
+            }
         }
 
-        document.getElementById("share").addEventListener("click", async () => {
-            await pageUrl.searchParams.set("data", await serializeSign());
-            navigator.clipboard.writeText(pageUrl.href).then(() => {
-                alert("Share link copied to clipboard!\nWARNING: Share links are currently unstable and may break at any time.");
-            });
-        });
         if (pageUrl.searchParams.has("data")) {
             deserializeSign(pageUrl.searchParams.get("data"));
             pageUrl.searchParams.delete("data");
             window.history.replaceState({}, "", pageUrl.href);
         }
+
+        document.getElementById("share").addEventListener("click", async () => {
+            await pageUrl.searchParams.set("data", await serializeSign());
+            document.getElementById("share-url").value = pageUrl.href;
+            document.getElementById("embed-code").value = `<iframe src="${pageUrl.href}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`;
+            shareDialog.showModal();
+        });
+        ["share-url", "embed-code"].forEach(id => {
+            document.getElementById(`copy-${id}`).addEventListener("click", e => {
+                navigator.clipboard.writeText(document.getElementById(id).value).then(() => {
+                    e.target.textContent = "Copied!";
+                    setTimeout(() => e.target.textContent = "Copy", 1000);
+                });
+            });
+        });
+        document.getElementById("close-share").addEventListener("click", () => shareDialog.close());
 
         function exportFile() {
             const esc = str => `"${str.replaceAll('"', '\\"')}"`;
