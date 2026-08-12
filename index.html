@@ -1234,7 +1234,7 @@
             }
             const pastedData = (e.clipboardData || window.clipboardData).getData("text");
             [
-                ["lm-editor-screen-data://", des => {
+                ["lh-editor-screen-data://", des => {
                     const screen = deserializeScreen(des);
                     if (screen.some(line => line.font === "UserFont") && !window.fonts.UserFont) {
                         alert("ERROR: Please paste or create a UserFont before loading a screen using it.");
@@ -1244,7 +1244,7 @@
                     changeScreen(currentScreen);
                     renderScreen();
                 }],
-                ["lm-editor-user-font://", des => {
+                ["lh-editor-user-font://", des => {
                     deserializeUserFont(des);
                     showFontsDialog();
                 }]
@@ -1267,11 +1267,11 @@
             document.getElementById("embed-code").value = `<iframe src="${pageUrl.href}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`;
             const screenSer = new Serializer();
             serializeScreen(screenSer, signData.screens[currentScreen - 1]);
-            document.getElementById("current-screen").value = `lm-editor-screen-data://${await screenSer.serialize()}`;
+            document.getElementById("current-screen").value = `lh-editor-screen-data://${await screenSer.serialize()}`;
             if (userFontInUse()) {
                 const userFontSer = new Serializer();
                 serializeUserFont(userFontSer);
-                document.getElementById("user-font").value = `lm-editor-user-font://${await userFontSer.serialize()}`;
+                document.getElementById("user-font").value = `lh-editor-user-font://${await userFontSer.serialize()}`;
             } else {
                 document.getElementById("user-font").value = "";
             }
