@@ -661,7 +661,7 @@
                     return;
                 }
                 document.getElementById("controls").setAttribute("data-playing", "true");
-                changeScreen(nextNonEmptyScreen(8));
+                changeScreen(nextNonEmptyScreen(currentScreen - 1));
                 playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), parseInt(document.getElementById("play-speed").value));
                 document.getElementById("play-pause").textContent = "Pause";
             }
@@ -680,6 +680,7 @@
                 height: signEl.height
             });
             const delay = parseInt(document.getElementById("play-speed").value);
+            const origScreen = currentScreen;
             const firstScreen = nextNonEmptyScreen(8);
 
             changeScreen(firstScreen);
@@ -690,6 +691,7 @@
                     break;
                 }
             }
+            changeScreen(origScreen);
 
             gif.on("finished", blob => {
                 const a = document.createElement("a");
