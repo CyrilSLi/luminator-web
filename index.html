@@ -473,26 +473,23 @@
                 return;
             }
             const { spacing, height, bitmap, pointers } = window.fonts[font];
-            const colWidth = Math.ceil(height / 8);
             let col = x;
 
             for (const [charIndex, char] of [...str].entries()) {
                 if (!fontCharset.slice(0, pointers.length).includes(char)) {
                     continue;
                 }
-                const startIndex = pointers[fontCharset.indexOf(char)] * colWidth;
-                const endIndex = (pointers[fontCharset.indexOf(char) + 1] * colWidth) || bitmap.length;
-                for (let i = startIndex; i < endIndex; i += colWidth, col++) {
-                    let charRow = 0;
-                    for (let j = colWidth - 1; j >= 0; j--) {
-                        const byte = bitmap[i + j];
-                        for (let bit = 0; bit < 8 && charRow < height; bit++, charRow++) {
-                            if (((byte & (1 << bit)) > 0) ^ invert) {
-                                drawPixel(imagePixels, previewPixels, col, y + charRow);
-                            }
-                        }
+                const startIndex = pointers[fontCharset.indexOf(char)] * height;
+                const endIndex = pointers[fontCharset.indexOf(char) + 1] * height || bitmap.length * 8;
+                for (let i = startIndex; i < endIndex; i++) {
+                    if (((bitmap[i >> 3] & (1 << (7 - (i & 7)))) > 0) ^ invert) {
+                        drawPixel(imagePixels, previewPixels, col, y + (i - startIndex) % height);
+                    }
+                    if ((i - startIndex + 1) % height === 0) {
+                        col++;
                     }
                 }
+
                 if (charIndex < str.length - 1) {
                     if (invert) {
                         for (let i = 0; i < spacing; i++) {

@@ -63,11 +63,26 @@ with open(args.csv_file, encoding="latin-1", newline="") as f:
                 spacing = 2
             else:
                 spacing = 1
+
+            trimmed_bitmap, bit_buffer, buffer_len = [], 0, 0
+            mask = (1 << font_height) - 1
+            for i in range(0, len(truncated_data), col_width):
+                chunk = int.from_bytes(truncated_data[i:i+col_width], byteorder="big")
+                bit_buffer = (bit_buffer << font_height) | int(f"{(chunk & mask):0{font_height}b}"[::-1], 2)
+                buffer_len += font_height
+
+            while buffer_len >= 8:
+                buffer_len -= 8
+                trimmed_bitmap.append((bit_buffer >> buffer_len) & 0xFF)
+            if buffer_len > 0:
+                trimmed_bitmap.append((bit_buffer << (8 - buffer_len)) & 0xFF)
+            assert len(trimmed_bitmap) == -(-len(truncated_data) * font_height // (col_width * 8)), f"Bitmap length mismatch for {font['FontFile']} (expected {-(-len(truncated_data) * font_height // (col_width * 8))}, got {len(trimmed_bitmap)})"
+
             output_fonts[font_name_repl.get(font["FontFile"], font["FontFile"]).upper().removesuffix(".FNT")] = {
                 "height": font_height,
                 "spacing": spacing,
                 "pointers": clean_pointers,
-                "bitmap": base64.b64encode(truncated_data).decode("utf-8"),
+                "bitmap": base64.b64encode(bytes(trimmed_bitmap)).decode("utf-8"),
             }
 
 with open("fonts.js", "w") as f:
