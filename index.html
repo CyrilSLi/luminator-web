@@ -42,9 +42,10 @@
             color: gray;
             opacity: 1;
         }
-        th, td, #screen p {
+        th, td, #screen p, #move-screens p {
             font-size: 18px;
             text-align: center;
+            margin: 2.5px 0px;
         }
         button:not(:has(.sign-canvas)), input, select {
             border: 1px solid black;
@@ -55,6 +56,7 @@
             background-color: black;
             image-rendering: -moz-crisp-edges;
             image-rendering: pixelated;
+            cursor: pointer;
         }
         #sign {
             box-sizing: border-box;
@@ -152,7 +154,7 @@
             position: absolute;
             left: -9999px;
         }
-        input[type="radio"]:checked + label > canvas {
+        input[type="radio"]:checked + label > .sign-canvas {
             height: 75%;
         }
         input[type="radio"]:checked + label {
@@ -171,7 +173,7 @@
         #settings fieldset :is(input, select, button) {
             flex: 1;
         }
-        #screen {
+        #screen, #move-screens {
             display: grid;
             grid-template-rows: min-content repeat(8, 1fr);
         }
@@ -194,6 +196,12 @@
         dialog::backdrop {
             background-color: rgba(0, 0, 0, 0.5);
         }
+        #share-dialog > input {
+            margin-bottom: 12.5px;
+        }
+        #move-screens > span {
+            min-width: max-content;
+        }
     </style>
 </head>
 <body>
@@ -210,6 +218,9 @@
             <canvas class="sign-canvas" id="sign"></canvas>
         </div>
         <div id="controls">
+            <div id="move-screens">
+                <p>Move</p>
+            </div>
             <div id="screen">
                 <p>Screen</p>
             </div>
@@ -301,14 +312,19 @@
     <dialog id="share-dialog">
         <fieldset>
             <button id="copy-share-url">Copy</button>
-            <p>&nbsp;Share link:</p>
+            <p>Share link:</p>
         </fieldset>
         <input type="text" id="share-url" readonly>
         <fieldset>
             <button id="copy-embed-code">Copy</button>
-            <p>&nbsp;Embed code:</p>
+            <p>Embed code:</p>
         </fieldset>
         <input type="text" id="embed-code" readonly>
+        <fieldset>
+            <button id="copy-current-screen">Copy</button>
+            <p>Current screen (paste into another editor tab):</p>
+        </fieldset>
+        <input type="text" id="current-screen" readonly>
         <button id="close-share" style="width: 100%;">Close</button>
     </dialog>
     <script>
@@ -360,7 +376,7 @@
             font.upperCaseOnly = font.pointers.length > fontCharset.indexOf("Z") && font.pointers.length <= fontCharset.indexOf("z");
         });
 
-        let textTableBody = "", screenDivBody = "";
+        let textTableBody = "", screenDivBody = "", moveDivBody = "";
         const sortedFonts = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true }));
         for (let i = 1; i <= 8; i++) {
             textTableBody += `
@@ -376,9 +392,19 @@
                 <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
                 <label for="screen-${i}" title="Switch to screen ${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
             `;
+            moveDivBody += `
+                <span>
+                    <button id="move-up-${i}" title="Move screen ${i} up" ${i === 1 ? 'style="visibility: hidden"' : ""}>
+                        &#x25B2;
+                    </button><button id="move-down-${i}" title="Move screen ${i} down" ${i === 8 ? 'style="visibility: hidden"' : ""}>
+                        &#x25BC;
+                    </button>
+                </span>
+            `;
         }
         document.querySelector("#text tbody").innerHTML = textTableBody;
         document.querySelector("#screen").innerHTML += screenDivBody;
+        document.querySelector("#move-screens").innerHTML += moveDivBody;
 
         let signData;
         const emptySignData = () => {
@@ -720,7 +746,27 @@
             lineData[attr] = value;
             renderScreen();
         }
+
+        function moveScreenUp(screen) {
+            if (screen <= 1) {
+                return;
+            }
+            [signData.screens[screen - 2], signData.screens[screen - 1]] = [signData.screens[screen - 1], signData.screens[screen - 2]];
+            changeScreen(currentScreen); // Update UI
+            renderSign();
+        }
+        function moveScreenDown(screen) {
+            if (screen >= 8) {
+                return;
+            }
+            [signData.screens[screen - 1], signData.screens[screen]] = [signData.screens[screen], signData.screens[screen - 1]];
+            changeScreen(currentScreen); // Update UI
+            renderSign();
+        }
+
         for (let i = 8; i >= 1; i--) {
+            document.getElementById(`move-up-${i}`).addEventListener("click", () => moveScreenUp(i));
+            document.getElementById(`move-down-${i}`).addEventListener("click", () => moveScreenDown(i));
             document.getElementById(`x-${i}`).addEventListener("input", () => updateLineAttr(i, "x", parseInt(document.getElementById(`x-${i}`).value)));
             document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
             document.getElementById(`font-${i}`).addEventListener("change", () => {
@@ -776,7 +822,13 @@
             constructor(data) {
                 this.data = data;
                 this.offset = 0;
-                this.versionValid = this.uint8() === serializationVersion;
+                const dataVersion = this.uint8();
+                if (dataVersion !== serializationVersion) {
+                    this.versionValid = false;
+                    alert(`ERROR: Invalid or outdated data format (expected ${serializationVersion}, got ${dataVersion}).`);
+                } else {
+                    this.versionValid = true;
+                }
             }
             static async deserialize(base64) {
                 base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
@@ -817,6 +869,25 @@
             }
         }
 
+        function serializeScreen(ser, screen) {
+            screen.forEach(line => {
+                ser.int16(line.x);
+                ser.int16(line.y);
+                ser.uint8(sortedFonts.indexOf(line.font));
+                ser.boolean(line.invert);
+                ser.string(line.text);
+            });
+        }
+        function deserializeScreen(des) {
+            return Array(8).fill().map(() => ({
+                x: des.int16(),
+                y: des.int16(),
+                font: sortedFonts[des.uint8()],
+                invert: des.boolean(),
+                text: des.string()
+            }));
+        }
+
         async function serializeSign() {
             const ser = new Serializer();
             ser.int16(document.getElementById("play-speed").value);
@@ -826,21 +897,12 @@
             ser.int16(document.getElementById("sign-code").value || 0);
             ser.string(document.getElementById("name1").value);
             ser.string(document.getElementById("name2").value);
-            signData.screens.forEach(screen => {
-                screen.forEach(line => {
-                    ser.int16(line.x);
-                    ser.int16(line.y);
-                    ser.uint8(sortedFonts.indexOf(line.font));
-                    ser.boolean(line.invert);
-                    ser.string(line.text);
-                });
-            });
+            signData.screens.forEach(screen => serializeScreen(ser, screen));
             return ser.serialize();
         }
         async function deserializeSign(base64) {
             const des = await Deserializer.deserialize(base64);
             if (!des.versionValid) {
-                alert("ERROR: Invalid share link version.");
                 return;
             }
             document.getElementById("play-speed").value = des.int16();
@@ -854,13 +916,7 @@
             document.getElementById("name1").value = des.string();
             document.getElementById("name2").value = des.string();
             for (let screen = 0; screen < 8; screen++) {
-                for (let line = 0; line < 8; line++) {
-                    signData.screens[screen][line].x = des.int16();
-                    signData.screens[screen][line].y = des.int16();
-                    signData.screens[screen][line].font = sortedFonts[des.uint8()];
-                    signData.screens[screen][line].invert = des.boolean();
-                    signData.screens[screen][line].text = des.string();
-                }
+                signData.screens[screen] = deserializeScreen(des);
             }
             changeScreen(1);
             renderSign();
@@ -875,13 +931,31 @@
             window.history.replaceState({}, "", pageUrl.href);
         }
 
+        window.addEventListener("paste", async e => {
+            const pastedData = (e.clipboardData || window.clipboardData).getData("text");
+            if (pastedData.startsWith("screen-data://")) {
+                e.preventDefault();
+                const des = await Deserializer.deserialize(pastedData.slice("screen-data://".length));
+                if (!des.versionValid) {
+                    return;
+                }
+                signData.screens[currentScreen - 1] = deserializeScreen(des);
+                changeScreen(currentScreen); // Update UI
+                renderScreen();
+            }
+        })
+
         document.getElementById("share").addEventListener("click", async () => {
             await pageUrl.searchParams.set("data", await serializeSign());
             document.getElementById("share-url").value = pageUrl.href;
             document.getElementById("embed-code").value = `<iframe src="${pageUrl.href}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`;
+            const screenSer = new Serializer();
+            serializeScreen(screenSer, signData.screens[currentScreen - 1]);
+            document.getElementById("current-screen").value = `screen-data://${await screenSer.serialize()}`;
             shareDialog.showModal();
         });
-        ["share-url", "embed-code"].forEach(id => {
+
+        ["share-url", "embed-code", "current-screen"].forEach(id => {
             document.getElementById(`copy-${id}`).addEventListener("click", e => {
                 navigator.clipboard.writeText(document.getElementById(id).value).then(() => {
                     e.target.textContent = "Copied!";
