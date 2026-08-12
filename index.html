@@ -42,7 +42,7 @@
             color: gray;
             opacity: 1;
         }
-        th, td, #screen p, #move-screens p {
+        th, td, .screen-col p {
             font-size: 18px;
             text-align: center;
             margin: 2.5px 0px;
@@ -173,7 +173,7 @@
         #settings fieldset :is(input, select, button) {
             flex: 1;
         }
-        #screen, #move-screens {
+        .screen-col {
             display: grid;
             grid-template-rows: min-content repeat(8, 1fr);
         }
@@ -218,11 +218,14 @@
             <canvas class="sign-canvas" id="sign"></canvas>
         </div>
         <div id="controls">
-            <div id="move-screens">
+            <div id="move-screens" class="screen-col">
                 <p>Move</p>
             </div>
-            <div id="screen">
+            <div id="screen" class="screen-col">
                 <p>Screen</p>
+            </div>
+            <div id="clear-screen" class="screen-col">
+                <p>&nbsp;</p>
             </div>
             <div class="vertical-divider"></div>
             <table id="text">
@@ -333,6 +336,7 @@
         let signPos;
 
         const pageUrl = new URL(window.location.href);
+        const clearBtn = document.getElementById("clear");
         const shareDialog = document.getElementById("share-dialog");
         const isEmbedded = pageUrl.searchParams.has("embed");
         const signEl = document.getElementById("sign");
@@ -376,22 +380,9 @@
             font.upperCaseOnly = font.pointers.length > fontCharset.indexOf("Z") && font.pointers.length <= fontCharset.indexOf("z");
         });
 
-        let textTableBody = "", screenDivBody = "", moveDivBody = "";
+        let moveDivBody = "", screenDivBody = "", clearDivBody = "", textTableBody = "";
         const sortedFonts = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true }));
         for (let i = 1; i <= 8; i++) {
-            textTableBody += `
-                <tr id="row-${i}">
-                    <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="x-${i}" required></td>
-                    <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="y-${i}" required></td>
-                    <td><select id="font-${i}">${sortedFonts.map(font => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}</select></td>
-                    <td><input type="checkbox" id="invert-${i}" title="Invert text"></td>
-                    <td><input type="text" id="text-${i}" placeholder="Screen 1 Line ${i}"></td>
-                </tr>
-            `;
-            screenDivBody += `
-                <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
-                <label for="screen-${i}" title="Switch to screen ${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
-            `;
             moveDivBody += `
                 <span>
                     <button id="move-up-${i}" title="Move screen ${i} up" ${i === 1 ? 'style="visibility: hidden"' : ""}>
@@ -401,24 +392,36 @@
                     </button>
                 </span>
             `;
+            screenDivBody += `
+                <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
+                <label for="screen-${i}" title="Switch to screen ${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
+            `;
+            clearDivBody += clearBtn.outerHTML.replace('id="clear"', `id="clear-screen-${i}" title="Clear screen ${i}"`);
+            textTableBody += `
+                <tr id="row-${i}">
+                    <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="x-${i}" required></td>
+                    <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="y-${i}" required></td>
+                    <td><select id="font-${i}">${sortedFonts.map(font => `<option value="${font}" ${font === defaultFont ? "selected" : ""}>${font}</option>`).join("")}</select></td>
+                    <td><input type="checkbox" id="invert-${i}" title="Invert text"></td>
+                    <td><input type="text" id="text-${i}" placeholder="Screen 1 Line ${i}"></td>
+                </tr>
+            `;
         }
-        document.querySelector("#text tbody").innerHTML = textTableBody;
-        document.querySelector("#screen").innerHTML += screenDivBody;
         document.querySelector("#move-screens").innerHTML += moveDivBody;
+        document.querySelector("#screen").innerHTML += screenDivBody;
+        document.querySelector("#clear-screen").innerHTML += clearDivBody;
+        document.querySelector("#text tbody").innerHTML = textTableBody;
 
         let signData;
+        const emptyScreenData = {
+            x: 1,
+            y: 1,
+            font: defaultFont,
+            invert: false,
+            text: ""
+        };
         const emptySignData = () => {
-            signData = JSON.parse(JSON.stringify({
-                screens: Array(8).fill(
-                    Array(8).fill({
-                        x: 1,
-                        y: 1,
-                        font: defaultFont,
-                        invert: false,
-                        text: ""
-                    })
-                )
-            }));
+            signData = JSON.parse(JSON.stringify({ screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
             document.getElementById("size").value = "16x160";
             updateGlobalAttr("size", "16x160");
             document.getElementById("color").value = "amber";
@@ -449,7 +452,7 @@
                 renderSign();
             }
         }
-        document.getElementById("clear").addEventListener("click", clearSign);
+        clearBtn.addEventListener("click", clearSign);
 
         function resizeSignContainer() {
             const cw = document.getElementById("sign-container").clientWidth;
@@ -752,7 +755,7 @@
                 return;
             }
             [signData.screens[screen - 2], signData.screens[screen - 1]] = [signData.screens[screen - 1], signData.screens[screen - 2]];
-            changeScreen(currentScreen); // Update UI
+            changeScreen(currentScreen);
             renderSign();
         }
         function moveScreenDown(screen) {
@@ -760,13 +763,20 @@
                 return;
             }
             [signData.screens[screen - 1], signData.screens[screen]] = [signData.screens[screen], signData.screens[screen - 1]];
-            changeScreen(currentScreen); // Update UI
+            changeScreen(currentScreen);
             renderSign();
         }
 
         for (let i = 8; i >= 1; i--) {
             document.getElementById(`move-up-${i}`).addEventListener("click", () => moveScreenUp(i));
             document.getElementById(`move-down-${i}`).addEventListener("click", () => moveScreenDown(i));
+            document.getElementById(`clear-screen-${i}`).addEventListener("click", () => {
+                signData.screens[i - 1] = JSON.parse(JSON.stringify(Array(8).fill(emptyScreenData)));
+                if (currentScreen === i) {
+                    changeScreen(currentScreen); // Update UI
+                }
+                renderScreen(i);
+            });
             document.getElementById(`x-${i}`).addEventListener("input", () => updateLineAttr(i, "x", parseInt(document.getElementById(`x-${i}`).value)));
             document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
             document.getElementById(`font-${i}`).addEventListener("change", () => {
@@ -940,7 +950,7 @@
                     return;
                 }
                 signData.screens[currentScreen - 1] = deserializeScreen(des);
-                changeScreen(currentScreen); // Update UI
+                changeScreen(currentScreen);
                 renderScreen();
             }
         })
