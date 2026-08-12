@@ -17,6 +17,10 @@
             color: black;
             box-sizing: border-box;
         }
+        body.embedded * {
+            margin: 0px !important;
+            padding: 0px !important;
+        }
         h1 {
             font-size: 22px;
             font-weight: bold;
@@ -71,9 +75,11 @@
             flex-direction: column;
             height: 100vh;
             height: 100dvh;
-            min-height: 480px;
             width: 100%;
             overflow: hidden;
+        }
+        body:not(.embedded) #app {
+            min-height: 480px;
         }
         #header, #controls {
             display: flex;
@@ -81,6 +87,9 @@
         }
         #header {
             align-items: center;
+        }
+        body.embedded #header {
+            display: none;
         }
         #header > span {
             display: inline-flex;
@@ -94,6 +103,9 @@
         }
         #controls {
             overflow-y: auto;
+        }
+        body.embedded #controls {
+            display: none;
         }
         #controls[data-playing="true"] {
             cursor: not-allowed;
@@ -282,19 +294,23 @@
         let playSignInterval = null;
         let signPos;
 
+        const pageUrl = new URL(window.location.href);
+        const isEmbedded = pageUrl.searchParams.has("embed");
         const signEl = document.getElementById("sign");
         const signCtx = signEl.getContext("2d", { willReadFrequently: true });
         signCtx.fillStyle = "black";
 
-        signEl.addEventListener("click", () => {
-            if (!document.fullscreenElement) {
-                signEl.requestFullscreen().catch(err => {
-                    alert(`Error entering full screen: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        });
+        if (!isEmbedded) {
+            signEl.addEventListener("click", () => {
+                if (!document.fullscreenElement) {
+                    signEl.requestFullscreen().catch(err => {
+                        alert(`Error entering full screen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+        }
 
         function showMousePox(ev) {
             const x = (ev.clientX - signPos.left) / signPos.width * signEl.width;
@@ -364,6 +380,19 @@
         };
         emptySignData();
 
+        const screensWithData = () => signData.screens.filter(screen => screen.some(line => line.text !== "")).length;
+
+        if (isEmbedded) {
+            document.body.classList.add("embedded");
+            pageUrl.searchParams.delete("embed");
+            playPauseSign();
+            const linkWrapper = document.createElement("a");
+            linkWrapper.href = pageUrl.href;
+            linkWrapper.target = "_blank";
+            signEl.parentNode.insertBefore(linkWrapper, signEl);
+            linkWrapper.appendChild(signEl);
+        }
+
         function clearSign() {
             if (confirm("Are you sure you want to clear the sign? This cannot be undone.")) {
                 emptySignData();
@@ -403,8 +432,8 @@
                 canvas.width = signData.width;
                 canvas.height = signData.height;
             });
-            document.querySelector("#sign-container > .sign-canvas").width = signData.width * 6 - 2;
-            document.querySelector("#sign-container > .sign-canvas").height = signData.height * 6 - 2;
+            signEl.width = signData.width * 6 - 2;
+            signEl.height = signData.height * 6 - 2;
             resizeSignContainer();
         }
         document.getElementById("size").addEventListener("change", resizeSign);
@@ -572,7 +601,10 @@
                 document.getElementById("controls").removeAttribute("data-playing");
                 document.getElementById("play-pause").textContent = "Play";
             } else {
-                if (signData.screens.filter(screen => screen.some(line => line.text !== "")).length < 2) {
+                if (screensWithData() < 2) {
+                    if (isEmbedded) {
+                        return; // Fail silently
+                    }
                     alert("Sign must have at least 2 non-empty screens to play.");
                     return;
                 }
@@ -585,7 +617,7 @@
         document.getElementById("play-pause").addEventListener("click", playPauseSign);
 
         function exportGif() {
-            if (signData.screens.filter(screen => screen.some(line => line.text !== "")).length < 1) {
+            if (screensWithData() < 1) {
                 alert("Sign must have at least 1 non-empty screen to export as GIF.");
                 return;
             }
@@ -811,7 +843,6 @@
             renderSign();
         }
 
-        const pageUrl = new URL(window.location.href);
         document.getElementById("share").addEventListener("click", async () => {
             await pageUrl.searchParams.set("data", await serializeSign());
             navigator.clipboard.writeText(pageUrl.href).then(() => {
@@ -883,6 +914,15 @@
         }
         document.getElementById("import").addEventListener("click", () => document.getElementById("import-file").click());
         document.getElementById("import-file").addEventListener("change", importFile);
+
+        if (!isEmbedded) {
+            window.addEventListener("beforeunload", e => {
+                if (screensWithData() > 0) {
+                    e.preventDefault();
+                    e.returnValue = "";
+                }
+            });
+        }
     </script>
 </body>
 </html>
