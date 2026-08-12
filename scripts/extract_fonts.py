@@ -58,7 +58,6 @@ with open(args.csv_file, encoding="latin-1", newline="") as f:
                 clean_pointers.append((p - BITMAP_OFFSET) // col_width)
         else:
             truncated_data = data[index : index + clean_pointers[-1] * col_width]
-            clean_pointers.pop() # Remove the last pointer for the end of the truncated data (if there are more characters than in the charset)
             if (int(re.search(r"\d+", font["FontFile"]).group()) >= 10): # TODO: Find a better way to determine font spacing
                 spacing = 2
             else:
