@@ -307,6 +307,7 @@
                         <option value="8x96">8x96</option>
                         <option value="8x80">8x80</option>
                         <option value="8x64">8x64</option>
+                        <option value="10x29">88x31*</option>
                     </select>
                 </fieldset>
                 <fieldset>
@@ -321,7 +322,7 @@
                     <label for="shape">Shape:</label>
                     <select name="shape" id="shape">
                         <option value="square">Square</option>
-                        <option value="round">Round</option>
+                        <option value="round" data-disallowed-sizes="10x29">Round</option>
                     </select>
                 </fieldset>
                 <div style="flex: 1;"></div>
@@ -912,11 +913,12 @@
                 alert("Sign must have at least 1 non-empty screen to export as GIF.");
                 return;
             }
+            const is88x31 = signData.height === 10 && signData.width === 29;
             const gif = new GIF({
                 workers: 2,
                 quality: 1, // Sample every pixel
-                width: signEl.width,
-                height: signEl.height
+                width: is88x31 ? 88 : signEl.width,
+                height: is88x31 ? 31 : signEl.height
             });
             const delay = parseInt(document.getElementById("play-speed").value);
             const origScreen = currentScreen;
@@ -924,7 +926,28 @@
 
             changeScreen(firstScreen);
             while (true) {
-                gif.addFrame(signCtx, { copy: true, delay });
+                if (is88x31) { // Custom 88x31 web badge size
+                    const badgeCanvas = document.createElement("canvas");
+                    const badgeCtx = badgeCanvas.getContext("2d");
+                    const badgeImageData = badgeCtx.createImageData(88, 31);
+                    const badgePixels = badgeImageData.data;
+                    const signWidth = signEl.width, signHeight = signEl.height;
+                    const signPixels = signCtx.getImageData(0, 0, signWidth, signHeight).data;
+
+                    badgeCanvas.width = 88;
+                    badgeCanvas.height = 31;
+                    badgeCtx.fillStyle = "black";
+                    badgeCtx.fillRect(0, 0, badgeCanvas.width, badgeCanvas.height);
+                    for (let signY = 0, badgeY = 1; badgeY < 30; signY += 2, badgeY++) {
+                        for (let signX = 0, badgeX = 1; badgeX < 87; signX += 2, badgeX++) {
+                            badgePixels.set(signPixels.slice((signY * signWidth + signX) * 4, (signY * signWidth + signX + 1) * 4), (badgeY * 88 + badgeX) * 4);
+                        }
+                    }
+                    badgeCtx.putImageData(badgeImageData, 0, 0);
+                    gif.addFrame(badgeCtx, { copy: true, delay });
+                } else {
+                    gif.addFrame(signCtx, { copy: true, delay });
+                }
                 changeScreen(nextNonEmptyScreen(currentScreen));
                 if (currentScreen === firstScreen) {
                     break;
@@ -955,16 +978,17 @@
         function updateGlobalAttr(attr, value) {
             if (attr === "size") {
                 [signData.height, signData.width] = value.split("x").map(Number);
-                document.querySelectorAll("#color option").forEach(option => {
+                document.querySelectorAll("option[data-allowed-sizes], option[data-disallowed-sizes]").forEach(option => {
+                    const attr = option.parentElement.id;
                     if (option.dataset.allowedSizes) {
                         option.disabled = !option.dataset.allowedSizes.split(" ").includes(value);
-                        if (option.disabled && option.selected) {
-                            const fallbackColor = document.querySelector("#color option:not([disabled])").value;
-                            document.getElementById("color").value = fallbackColor;
-                            signData.color = fallbackColor;
-                        }
                     } else {
-                        option.disabled = false;
+                        option.disabled = option.dataset.disallowedSizes.split(" ").includes(value);
+                    }
+                    if (option.disabled && option.selected) {
+                        const fallback = document.querySelector(`#${attr} option:not([disabled])`).value;
+                        document.getElementById(attr).value = fallback;
+                        signData[attr] = fallback;
                     }
                 });
                 resizeSign();
