@@ -9,8 +9,8 @@ args = parser.parse_args()
 POINTER_OFFSET = 28
 CHARSET = r""" !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"""
 
-abs_path = lambda path: os.path.join(os.path.dirname(__file__), path)
-fonts_path = abs_path(Path("../src/fonts.json"))
+abs_path = lambda path: os.path.join(os.path.dirname(__file__), Path(path))
+fonts_path = abs_path("../src/fonts.json")
 
 with open(abs_path("font_name_repl.json"), "r") as f:
     font_name_repl = json.load(f)

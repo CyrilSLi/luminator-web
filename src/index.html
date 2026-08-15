@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Luminator&reg; Horizon&trade; Web Editor</title>
-    <script src="fonts.js"></script>
-    <script src="gif.js"></script>
     <style>
         * {
             touch-action: manipulation;
@@ -389,6 +387,9 @@
         </fieldset>
     </dialog>
     <script>
+        "%GIF_JS%";
+        const fonts = "%FONTS_JSON%";
+
         let currentScreen = 1;
         let playSignInterval = null;
         let signPos;
@@ -433,9 +434,9 @@
         });
 
         const defaultFont = "16DVW";
-        const fontCharset = window.fonts.__charset__;
-        delete window.fonts.__charset__;
-        Object.values(window.fonts).forEach(font => {
+        const fontCharset = fonts.__charset__;
+        delete fonts.__charset__;
+        Object.values(fonts).forEach(font => {
             font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0));
             const numChars = font.pointers.length - 1;
             font.upperCaseOnly = numChars > fontCharset.indexOf("Z") && numChars <= fontCharset.indexOf("z");
@@ -599,7 +600,7 @@
             }
             userFont.bitmap = bitmap;
             delete userFont.editorTexts;
-            window.fonts["UserFont"] = userFont;
+            fonts["UserFont"] = userFont;
             renderSign();
         };
         fontsDialog.addEventListener("close", saveUserFont);
@@ -620,7 +621,7 @@
         }
 
         let moveDivBody = "", screenDivBody = "", clearDivBody = "", textTableBody = "";
-        const sortedFonts = Object.keys(window.fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true })).concat("UserFont");
+        const sortedFonts = Object.keys(fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true })).concat("UserFont");
         for (let i = 1; i <= 8; i++) {
             moveDivBody += `
                 <span>
@@ -672,7 +673,7 @@
         emptySignData();
 
         const screensWithData = () => signData.screens.filter(screen => screen.some(line => line.text !== "")).length;
-        const userFontInUse = () => window.fonts.UserFont && signData.screens.filter(screen => screen.some(line => line.font === "UserFont")).length > 0;
+        const userFontInUse = () => fonts.UserFont && signData.screens.filter(screen => screen.some(line => line.font === "UserFont")).length > 0;
 
         if (isEmbedded) {
             document.body.classList.add("embedded");
@@ -793,7 +794,7 @@
             if (!font || !str) {
                 return;
             }
-            const { spacing, height, bitmap, pointers } = window.fonts[font];
+            const { spacing, height, bitmap, pointers } = fonts[font];
             let col = x;
 
             for (const [charIndex, char] of [...str].entries()) {
@@ -915,6 +916,7 @@
             }
             const is88x31 = signData.height === 10 && signData.width === 29;
             const gif = new GIF({
+                workerScript: URL.createObjectURL(new Blob([`"%GIF_WORKER_JS%"`], { type: "text/javascript" })),
                 workers: 2,
                 quality: 1, // Sample every pixel
                 width: is88x31 ? 88 : signEl.width,
@@ -1003,7 +1005,7 @@
 
         function updateLineAttr(line, attr, value) {
             const lineData = signData.screens[currentScreen - 1][line - 1];
-            if (attr === "text" && window.fonts[lineData.font].upperCaseOnly) {
+            if (attr === "text" && fonts[lineData.font].upperCaseOnly) {
                 value = value.toUpperCase();
                 const textInput = document.getElementById(`text-${line}`);
                 const cursorPos = textInput.selectionStart;
@@ -1046,7 +1048,7 @@
             document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
             document.getElementById(`font-${i}`).addEventListener("change", () => {
                 const selectedFont = document.getElementById(`font-${i}`).value;
-                if (selectedFont === "Edit..." || (selectedFont === "UserFont"  && !window.fonts.UserFont)) {
+                if (selectedFont === "Edit..." || (selectedFont === "UserFont"  && !fonts.UserFont)) {
                     document.getElementById(`font-${i}`).value = signData.screens[currentScreen - 1][i - 1].font; // Reset to previous font
                     showFontsDialog();
                 } else {
@@ -1178,7 +1180,7 @@
             userFont.spacing = des.uint8();
             userFont.pointers = Array(des.uint8()).fill().map(() => des.int16());
             userFont.bitmap = Uint8Array.from(Array(des.int16()).fill().map(() => des.uint8()));
-            window.fonts["UserFont"] = userFont;
+            fonts["UserFont"] = userFont;
             document.getElementById("font-height").value = userFont.height;
             document.getElementById("font-spacing").value = userFont.spacing;
             changeFontHeight();
@@ -1260,7 +1262,7 @@
             [
                 ["lh-editor-screen-data://", des => {
                     const screen = deserializeScreen(des);
-                    if (screen.some(line => line.font === "UserFont") && !window.fonts.UserFont) {
+                    if (screen.some(line => line.font === "UserFont") && !fonts.UserFont) {
                         alert("ERROR: Please paste or create a UserFont before loading a screen using it.");
                     } else {
                         signData.screens[currentScreen - 1] = screen;
