@@ -1,4 +1,5 @@
 import argparse, base64, csv, json, os, re
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description="Extract font bitmaps from a CSV file extracted from a Luminator IPS project.")
 parser.add_argument("csv_file", help="Path to the CSV file containing font data.")
@@ -7,19 +8,20 @@ args = parser.parse_args()
 
 POINTER_OFFSET = 28
 CHARSET = r""" !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"""
-output_prefix = "window.fonts = "
 
-with open(os.path.join(os.path.dirname(__file__), "font_name_repl.json"), "r") as f:
+abs_path = lambda path: os.path.join(os.path.dirname(__file__), path)
+fonts_path = abs_path(Path("../src/fonts.json"))
+
+with open(abs_path("font_name_repl.json"), "r") as f:
     font_name_repl = json.load(f)
 
 output_fonts = {}
-if (not os.path.exists("fonts.js") or args.clear):
-    with open("fonts.js", "w") as f:
+if (not os.path.exists(fonts_path) or args.clear):
+    with open(fonts_path, "w") as f:
         pass # Create empty file
 else:
-    with open("fonts.js", "r") as f:
-        if f.read(len(output_prefix)) == output_prefix:
-            output_fonts = json.load(f)
+    with open(fonts_path, "r") as f:
+        output_fonts = json.load(f)
 output_fonts["__charset__"] = CHARSET
 
 with open(args.csv_file, encoding="latin-1", newline="") as f:
@@ -84,6 +86,5 @@ with open(args.csv_file, encoding="latin-1", newline="") as f:
                 "bitmap": base64.b64encode(bytes(trimmed_bitmap)).decode("utf-8"),
             }
 
-with open("fonts.js", "w") as f:
-    f.write(output_prefix)
+with open(fonts_path, "w") as f:
     json.dump(output_fonts, f, separators=(",", ":"), ensure_ascii=False)
