@@ -90,7 +90,7 @@
         #header {
             align-items: center;
         }
-        body.embedded #header {
+        body.embedded #header, #club-512kb {
             display: none;
         }
         #header > span {
@@ -99,9 +99,13 @@
             margin-left: 5px;
             flex-wrap: wrap;
         }
-        #mouse-pos {
+        #mouse-pos, #club-512kb {
             margin-left: auto;
-            display: none;
+        }
+        @media screen and (min-width: 820px) {
+            #mouse-pos[hidden] + #club-512kb {
+                display: none; /* change to block once in 512kb club */
+            }
         }
         #controls {
             overflow-y: auto;
@@ -247,7 +251,7 @@
                 <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
                 <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
             </span>
-            <p id="mouse-pos">Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
+            <p id="mouse-pos" hidden>Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
         </div>
         <div id="sign-container">
             <canvas class="sign-canvas" id="sign"></canvas>
@@ -399,7 +403,7 @@
             return btoa(base64).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
         }
 
-        async function decompressBase64(base64) {
+        async function decompressBase64(base64, isText = false) {
             base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
             base64 += "=".repeat((4 - base64.length % 4) % 4);
             base64 = atob(base64);
@@ -407,10 +411,13 @@
             for (let i = 0; i < base64.length; i++) {
                 array[i] = base64.charCodeAt(i);
             }
-            return new Uint8Array(await new Response(new Blob([array]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+            const data = new Uint8Array(await new Response(new Blob([array]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+            return isText ? new TextDecoder().decode(data) : data;
         };
 
+
         const fonts = "%FONTS_JSON%";
+        document.getElementById("header").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
 
         let currentScreen = 1;
         let playSignInterval = null;
@@ -446,12 +453,12 @@
         }
         signEl.addEventListener("mouseenter", () => {
             if (window.matchMedia("(min-width: 700px)").matches) {
-                document.getElementById("mouse-pos").style.display = "block";
+                document.getElementById("mouse-pos").removeAttribute("hidden");
                 signEl.addEventListener("mousemove", showMousePox);
             }
         });
         signEl.addEventListener("mouseleave", () => {
-            document.getElementById("mouse-pos").style.display = "none";
+            document.getElementById("mouse-pos").setAttribute("hidden", "");
             signEl.removeEventListener("mousemove", showMousePox);
         });
 
