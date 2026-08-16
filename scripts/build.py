@@ -16,20 +16,10 @@ with open(abs_path("../src/fonts.json")) as f:
 with open(abs_path("../src/gif.js")) as f:
     gif_js = f.read()
     dev_html = dev_html.replace('"%GIF_JS%"', gif_js)
-    index_html = index_html.replace('"%GIF_JS%"', '''
-        await new Promise((resolve, reject) => {
-            decompressBase64("%GIF_JS%").then(array => {
-                const gifJs = URL.createObjectURL(new Blob([array], { type: "application/javascript" }));
-                const script = document.createElement("script");
-                script.src = gifJs;
-                script.async = true;
-                script.onload = () => {
-                    URL.revokeObjectURL(gifJs);
-                    resolve();
-                };
-                document.head.appendChild(script);
-            });
-        })'''.replace("%GIF_JS%", compress_base64(gif_js)))
+    index_html = index_html.replace('"%GIF_JS%"', '''const script = document.createElement("script");
+                script.textContent = new TextDecoder().decode(await decompressBase64("%GIF_JS%"));
+                document.body.appendChild(script);
+                script.remove()'''.replace("%GIF_JS%", compress_base64(gif_js)))
 
 with open(abs_path("../src/gif.worker.js")) as f:
     gif_worker_js = f.read()
