@@ -254,7 +254,7 @@
             <p id="mouse-pos" hidden>Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
         </div>
         <div id="sign-container">
-            <canvas class="sign-canvas" id="sign"></canvas>
+            <canvas class="sign-canvas" id="sign" style="width: 0px;"></canvas>
         </div>
         <div id="controls">
             <div id="move-screens" class="screen-col">
@@ -414,7 +414,6 @@
             const data = new Uint8Array(await new Response(new Blob([array]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
             return isText ? new TextDecoder().decode(data) : data;
         };
-
 
         const fonts = "%FONTS_JSON%";
         document.getElementById("header").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
