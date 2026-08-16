@@ -388,7 +388,28 @@
         </fieldset>
     </dialog>
     <script>
-        "%GIF_JS%";
+        // %ASYNC_HEADER%
+
+        async function compressBase64(data) {
+            const array = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+            let base64 = "";
+            for (let i = 0; i < array.length; i += 0x4000) {
+                base64 += String.fromCharCode(...array.subarray(i, i + 0x4000));
+            }
+            return btoa(base64).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+        }
+
+        async function decompressBase64(base64) {
+            base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
+            base64 += "=".repeat((4 - base64.length % 4) % 4);
+            base64 = atob(base64);
+            const array = new Uint8Array(base64.length);
+            for (let i = 0; i < base64.length; i++) {
+                array[i] = base64.charCodeAt(i);
+            }
+            return new Uint8Array(await new Response(new Blob([array]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+        };
+
         const fonts = "%FONTS_JSON%";
 
         let currentScreen = 1;
@@ -910,14 +931,19 @@
         }
         document.getElementById("play-pause").addEventListener("click", playPauseSign);
 
-        function exportGif() {
+        let gifWorkerScript;
+        /* async */ function exportGif() {
+            if (typeof GIF === "undefined") {
+                "%GIF_JS%";
+                gifWorkerScript = URL.createObjectURL(new Blob(["%GIF_WORKER_JS%"], { type: "text/javascript" }));
+            }
             if (screensWithData() < 1) {
                 alert("Sign must have at least 1 non-empty screen to export as GIF.");
                 return;
             }
             const is88x31 = signData.height === 10 && signData.width === 29;
             const gif = new GIF({
-                workerScript: URL.createObjectURL(new Blob([`"%GIF_WORKER_JS%"`], { type: "text/javascript" })),
+                workerScript: gifWorkerScript,
                 workers: 2,
                 quality: 1, // Sample every pixel
                 width: is88x31 ? 88 : signEl.width,
@@ -1091,23 +1117,7 @@
                 optionalObjSerDes[objectName][0](this);
             }
             async serialize() {
-                const data = Uint8Array.from(this.data);
-                return new Response(
-                    new ReadableStream({
-                        start(controller) {
-                            controller.enqueue(data);
-                            controller.close();
-                        }
-                    }).pipeThrough(new CompressionStream("deflate"))
-                ).arrayBuffer().then(buffer => {
-                    const array = new Uint8Array(buffer);
-                    let base64 = "";
-                    for (let i = 0; i < array.length; i++) {
-                        base64 += String.fromCharCode(array[i]);
-                    }
-                    base64 = btoa(base64);
-                    return base64.replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-                });
+                return compressBase64(new Uint8Array(this.data));
             }
         }
         class Deserializer {
@@ -1123,23 +1133,7 @@
                 }
             }
             static async deserialize(base64) {
-                base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
-                base64 += "=".repeat((4 - base64.length % 4) % 4);
-                base64 = atob(base64);
-                const array = new Uint8Array(base64.length);
-                for (let i = 0; i < base64.length; i++) {
-                    array[i] = base64.charCodeAt(i);
-                }
-                return new Deserializer(
-                    await new Response(
-                        new ReadableStream({
-                            start(controller) {
-                                controller.enqueue(array);
-                                controller.close();
-                            }
-                        }).pipeThrough(new DecompressionStream("deflate"))
-                    ).arrayBuffer().then(buffer => new Uint8Array(buffer))
-                );
+                return new Deserializer(await decompressBase64(base64));
             }
             boolean() {
                 return this.uint8() === 1;
@@ -1383,6 +1377,7 @@
                 }
             });
         }
+        // %ASYNC_FOOTER%
     </script>
 </body>
 </html>

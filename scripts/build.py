@@ -1,19 +1,45 @@
-import os, subprocess
+import base64, os, subprocess, zlib
 from pathlib import Path
 
 abs_path = lambda path: os.path.join(os.path.dirname(__file__), Path(path))
+compress_base64 = lambda s: base64.b64encode(zlib.compress(s.encode("utf-8"), 9)).decode("utf-8").replace("+", "-").replace("/", "_").rstrip("=")
 
 with open(abs_path("../src/index.html")) as f:
     index_html = f.read()
+    dev_html = index_html
 
-for [src, dest] in (
-    ("../src/fonts.json", "FONTS_JSON"),
-    ("../src/gif.js", "GIF_JS"),
-    ("../src/gif.worker.js", "GIF_WORKER_JS")
-):
-    with open(abs_path(src)) as f:
-        index_html = index_html.replace(f'"%{dest}%"', f.read())
+with open(abs_path("../src/fonts.json")) as f:
+    fonts_json = f.read()
+    dev_html = dev_html.replace('"%FONTS_JSON%"', fonts_json)
+    index_html = index_html.replace('"%FONTS_JSON%"', f'JSON.parse(new TextDecoder().decode(await decompressBase64("{compress_base64(fonts_json)}")))')
 
+with open(abs_path("../src/gif.js")) as f:
+    gif_js = f.read()
+    dev_html = dev_html.replace('"%GIF_JS%"', gif_js)
+    index_html = index_html.replace('"%GIF_JS%"', '''
+        await new Promise((resolve, reject) => {
+            decompressBase64("%GIF_JS%").then(array => {
+                const gifJs = URL.createObjectURL(new Blob([array], { type: "application/javascript" }));
+                const script = document.createElement("script");
+                script.src = gifJs;
+                script.async = true;
+                script.onload = () => {
+                    URL.revokeObjectURL(gifJs);
+                    resolve();
+                };
+                document.head.appendChild(script);
+            });
+        })'''.replace("%GIF_JS%", compress_base64(gif_js)))
+
+with open(abs_path("../src/gif.worker.js")) as f:
+    gif_worker_js = f.read()
+    dev_html = dev_html.replace('"%GIF_WORKER_JS%"', f"`{gif_worker_js}`")
+    index_html = index_html.replace('"%GIF_WORKER_JS%"', f'await decompressBase64("{compress_base64(gif_worker_js)}")')
+
+index_html = index_html.replace("// %ASYNC_HEADER%", "(async () => {").replace("// %ASYNC_FOOTER%", "})();").replace("/* async */", "async")
+
+with open(abs_path("../index.dev.html"), "w") as f:
+    f.write(dev_html)
 with open(abs_path("../src/index.unmin.html"), "w") as f:
     f.write(index_html)
 
