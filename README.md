@@ -2,7 +2,7 @@
 
 A local web-based editor for transit destination signs, emulating the Luminator Horizon line of monochrome LED signs.
 
-![Demo sign GIF](src/demo.gif)
+[![Demo sign GIF](src/demo.gif)](https://cyrilsli.github.io/luminator-web/?data=eJztz7sKwkAQheEZBQU7C0VBdCorL8-geAtEI4kg2K3JEhfHrOxGJW_pI4napkhh6Wn-8uNg9YnwXRnKdSy5K-gAVqGx8nzn4G2IiPbzKc1nzs7zoQ21ClCYGcWW1ShW6el2HCk95ttFJSLVZviQR3ABEUq7NSBgEyA_hcDWG-xtWWRkVZwMKBB3SUtnMaDgJIwkVsn5h97nYHfCTKxDwZyRTbWREfXpanQorZVRMe6f3LwAOaE-Rw)
 
 ## Features
 
