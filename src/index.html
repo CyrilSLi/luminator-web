@@ -244,7 +244,7 @@
     </style>
 </head>
 <body>
-    <div id="app">
+    <div id="app" style="visibility: hidden;">
         <div id="header">
             <h1>Luminator&reg;&nbsp;Horizon&trade;</h1>
             <span>
@@ -393,6 +393,10 @@
     </dialog>
     <script>
         // %ASYNC_HEADER%
+        const getElementById = (id) => document.getElementById(id);
+        const querySelector = (sel) => document.querySelector(sel);
+        const querySelectorAll = (sel) => document.querySelectorAll(sel);
+        const onEvent = (el, e, fn) => el.addEventListener(e, fn);
 
         async function compressBase64(data) {
             const array = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
@@ -416,7 +420,7 @@
         };
 
         const fonts = "%FONTS_JSON%";
-        document.getElementById("header").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
+        getElementById("header").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
 
         let currentScreen = 1;
         let playSignInterval = null;
@@ -424,16 +428,16 @@
         let userFont;
 
         const pageUrl = new URL(window.location.href);
-        const clearBtn = document.getElementById("clear");
-        const shareDialog = document.getElementById("share-dialog");
-        const fontsDialog = document.getElementById("fonts-dialog");
+        const clearBtn = getElementById("clear");
+        const shareDialog = getElementById("share-dialog");
+        const fontsDialog = getElementById("fonts-dialog");
         const isEmbedded = pageUrl.searchParams.has("embed");
-        const signEl = document.getElementById("sign");
+        const signEl = getElementById("sign");
         const signCtx = signEl.getContext("2d", { willReadFrequently: true });
         signCtx.fillStyle = "black";
 
         if (!isEmbedded) {
-            signEl.addEventListener("click", () => {
+            onEvent(signEl, "click", () => {
                 if (!document.fullscreenElement) {
                     signEl.requestFullscreen().catch(err => {
                         alert(`Error entering full screen: ${err.message}`);
@@ -447,18 +451,18 @@
         function showMousePox(ev) {
             const x = (ev.clientX - signPos.left) / signPos.width * signEl.width;
             const y = (ev.clientY - signPos.top) / signPos.height * signEl.height;
-            document.getElementById("mouse-x").textContent = Math.max(1, Math.min(Math.floor((x + 1) / 6) + 1, signData.width));
-            document.getElementById("mouse-y").textContent = Math.max(1, Math.min(Math.floor((y + 1) / 6) + 1, signData.height));
+            getElementById("mouse-x").textContent = Math.max(1, Math.min(Math.floor((x + 1) / 6) + 1, signData.width));
+            getElementById("mouse-y").textContent = Math.max(1, Math.min(Math.floor((y + 1) / 6) + 1, signData.height));
         }
-        signEl.addEventListener("mouseenter", () => {
+        onEvent(signEl, "mouseenter", () => {
             if (window.matchMedia("(min-width: 700px)").matches) {
-                document.getElementById("mouse-pos").removeAttribute("hidden");
-                signEl.addEventListener("mousemove", showMousePox);
+                getElementById("mouse-pos").removeAttribute("hidden");
+                onEvent(signEl, "mousemove", showMousePox);
             }
         });
-        signEl.addEventListener("mouseleave", () => {
-            document.getElementById("mouse-pos").setAttribute("hidden", "");
-            signEl.removeEventListener("mousemove", showMousePox);
+        onEvent(signEl, "mouseleave", () => {
+            getElementById("mouse-pos").setAttribute("hidden", "");
+            onEvent(signEl, "mousemove", showMousePox);
         });
 
         const defaultFont = "16DVW";
@@ -471,54 +475,54 @@
         });
         const lineNums = "1234567890ABCDEFGHIJKLMNOPQRSTUV";
 
-        document.getElementById("font-spacing").addEventListener("input", () => {
-            const newSpacing = parseInt(document.getElementById("font-spacing").value);
+        onEvent(getElementById("font-spacing"), "input", () => {
+            const newSpacing = parseInt(getElementById("font-spacing").value);
             if (newSpacing < 0 || newSpacing > 32) {
                 alert("Font spacing must be between 0 and 32.");
                 return;
             }
-            userFont.spacing = newSpacing;
+            userFont._spacing = newSpacing;
         });
 
-        document.getElementById("close-fonts").addEventListener("click", () => fontsDialog.close());
+        onEvent(getElementById("close-fonts"), "click", () => fontsDialog.close());
 
         function emptyUserFont() {
-            userFont = JSON.parse(JSON.stringify({
-                height: 8,
-                spacing: 1,
-                editorTexts: [],
-                pointers: [],
-                bitmap: []
-            }));
-            document.getElementById("font-height").value = userFont.height;
-            document.getElementById("font-spacing").value = userFont.spacing;
+            userFont = {
+                _height: 8,
+                _spacing: 1,
+                _editorTexts: [],
+                _pointers: [],
+                _bitmap: []
+            };
+            getElementById("font-height").value = userFont._height;
+            getElementById("font-spacing").value = userFont._spacing;
             renderCharTextareas();
             changeFontHeight();
         }
         emptyUserFont();
-        document.getElementById("clear-font").addEventListener("click", () => {
+        onEvent(getElementById("clear-font"), "click", () => {
             if (confirm("Are you sure you want to clear this font?")) {
                 emptyUserFont();
             }
         });
 
         function renderCharTextareas() {
-            let charCount = userFont.editorTexts.length;
+            let charCount = userFont._editorTexts.length;
             if (charCount === 0) {
-                userFont.editorTexts.push(null);
+                userFont._editorTexts.push(null);
                 charCount = 1;
             }
-            document.querySelectorAll(`#char-editor-${charCount - 1} ~ .char-editor`).forEach(el => el.remove());
-            for (let i = document.querySelectorAll("#char-editors > .char-editor").length; i < charCount; i++) {
-                document.getElementById("char-editors").insertAdjacentHTML("beforeend", `
+            querySelectorAll(`#char-editor-${charCount - 1} ~ .char-editor`).forEach(el => el.remove());
+            for (let i = querySelectorAll("#char-editors > .char-editor").length; i < charCount; i++) {
+                getElementById("char-editors").insertAdjacentHTML("beforeend", `
                     <div id="char-editor-${i}" class="char-editor">
                         <fieldset>
                             <textarea tabindex="-1" readonly>${fontCharset[i]}</textarea>
                             <textarea tabindex="-1" id="char-colindex-${i}" wrap="off" readonly>1</textarea>
                         </fieldset>
                         <fieldset>
-                            <textarea tabindex="-1" id="char-rowindex-${i}" style="height: ${userFont.height}lh;" readonly>${lineNums.slice(0, userFont.height).split("").join("\n")}</textarea>
-                            <textarea class="char-textarea"id="char-textarea-${i}" wrap="off" style="height: ${userFont.height}lh;"></textarea>
+                            <textarea tabindex="-1" id="char-rowindex-${i}" style="height: ${userFont._height}lh;" readonly>${lineNums.slice(0, userFont._height).split("").join("\n")}</textarea>
+                            <textarea class="char-textarea"id="char-textarea-${i}" wrap="off" style="height: ${userFont._height}lh;"></textarea>
                         </fieldset>
                         <fieldset>
                             <button id="move-char-left-${i}" title="Move character left" class="move-char-left">
@@ -531,39 +535,39 @@
                         </fieldset>
                     </div>
                 `);
-                document.getElementById(`char-textarea-${i}`).addEventListener("input", e => charTextareaInput(e.target, i));
-                document.getElementById(`move-char-left-${i}`).addEventListener("click", () => {
-                    [userFont.editorTexts[i - 1], userFont.editorTexts[i]] = [userFont.editorTexts[i], userFont.editorTexts[i - 1]];
+                onEvent(getElementById(`char-textarea-${i}`), "input", e => charTextareaInput(e.target, i));
+                onEvent(getElementById(`move-char-left-${i}`), "click", () => {
+                    [userFont._editorTexts[i - 1], userFont._editorTexts[i]] = [userFont._editorTexts[i], userFont._editorTexts[i - 1]];
                     renderCharTextareas();
                 });
-                document.getElementById(`move-char-right-${i}`).addEventListener("click", () => {
-                    [userFont.editorTexts[i], userFont.editorTexts[i + 1]] = [userFont.editorTexts[i + 1], userFont.editorTexts[i]];
+                onEvent(getElementById(`move-char-right-${i}`), "click", () => {
+                    [userFont._editorTexts[i], userFont._editorTexts[i + 1]] = [userFont._editorTexts[i + 1], userFont._editorTexts[i]];
                     renderCharTextareas();
                 });
-                document.getElementById(`delete-char-${i}`).addEventListener("click", () => {
-                    userFont.editorTexts.splice(i, 1);
+                onEvent(getElementById(`delete-char-${i}`), "click", () => {
+                    userFont._editorTexts.splice(i, 1);
                     renderCharTextareas();
                 });
             }
-            document.getElementById("char-count").textContent = charCount;
+            getElementById("char-count").textContent = charCount;
             for (let i = 0; i < charCount; i++) {
-                const textareaEl = document.getElementById(`char-textarea-${i}`);
-                if (textareaEl.value !== userFont.editorTexts[i]) {
-                    textareaEl.value = userFont.editorTexts[i];
+                const textareaEl = getElementById(`char-textarea-${i}`);
+                if (textareaEl.value !== userFont._editorTexts[i]) {
+                    textareaEl.value = userFont._editorTexts[i];
                     charTextareaInput(textareaEl, i);
                 }
             }
         }
 
         function charTextareaInput(el, index) {
-            userFont.editorTexts[index] = el.value;
+            userFont._editorTexts[index] = el.value;
             const selectionStart = el.selectionStart;
             const lines = el.value.split("\n");
-            let maxLineLen = Math.max(...lines.slice(0, userFont.height).map(line => line.length), 1);
-            if (lines.length > userFont.height) {
-                el.value = lines.slice(0, userFont.height).join("\n");
-            } else if (lines.length < userFont.height) {
-                el.value = lines.concat(Array(userFont.height - lines.length).fill("")).join("\n");
+            let maxLineLen = Math.max(...lines.slice(0, userFont._height).map(line => line.length), 1);
+            if (lines.length > userFont._height) {
+                el.value = lines.slice(0, userFont._height).join("\n");
+            } else if (lines.length < userFont._height) {
+                el.value = lines.concat(Array(userFont._height - lines.length).fill("")).join("\n");
             }
             if (maxLineLen > 32) {
                 el.value = lines.map(line => line.slice(0, 32)).join("\n");
@@ -571,54 +575,54 @@
             }
             el.style.width = "auto";
             el.style.width = `calc((1ch + 6.4px) * ${maxLineLen})`;
-            const colIndexEl = document.getElementById(`char-colindex-${index}`);
+            const colIndexEl = getElementById(`char-colindex-${index}`);
             colIndexEl.value = lineNums.slice(0, maxLineLen);
             colIndexEl.style.width = `calc((1ch + 6.4px) * ${maxLineLen})`;
             el.setSelectionRange(selectionStart, selectionStart);
         }
 
-        document.getElementById("add-char").addEventListener("click", () => {
-            if (userFont.editorTexts.length >= fontCharset.length) {
+        onEvent(getElementById("add-char"), "click", () => {
+            if (userFont._editorTexts.length >= fontCharset.length) {
                 alert(`Maximum amount of ${fontCharset.length} characters reached.`);
                 return;
             }
-            userFont.editorTexts.push(null);
+            userFont._editorTexts.push(null);
             renderCharTextareas();
         });
 
         function changeFontHeight() {
-            const newHeight = parseInt(document.getElementById("font-height").value);
+            const newHeight = parseInt(getElementById("font-height").value);
             if (newHeight < 1 || newHeight > 32) {
                 alert("Font height must be between 1 and 32.");
                 return;
             }
-            userFont.height = newHeight;
-            for (let i = 0; i < userFont.editorTexts.length; i++) {
-                document.getElementById(`char-rowindex-${i}`).style.height = `${newHeight}lh`;
-                document.getElementById(`char-rowindex-${i}`).value = lineNums.slice(0, newHeight).split("").join("\n");
-                document.getElementById(`char-textarea-${i}`).style.height = `${newHeight}lh`;
-                charTextareaInput(document.getElementById(`char-textarea-${i}`), i);
+            userFont._height = newHeight;
+            for (let i = 0; i < userFont._editorTexts.length; i++) {
+                getElementById(`char-rowindex-${i}`).style.height = `${newHeight}lh`;
+                getElementById(`char-rowindex-${i}`).value = lineNums.slice(0, newHeight).split("").join("\n");
+                getElementById(`char-textarea-${i}`).style.height = `${newHeight}lh`;
+                charTextareaInput(getElementById(`char-textarea-${i}`), i);
             }
         }
-        document.getElementById("font-height").addEventListener("input", changeFontHeight);
+        onEvent(getElementById("font-height"), "input", changeFontHeight);
 
         function saveUserFont() {
             const bitArray = [];
-            userFont.pointers = [];
-            userFont.editorTexts.forEach((text, i) => {
-                userFont.pointers.push(bitArray.length / userFont.height);
+            userFont._pointers = [];
+            userFont._editorTexts.forEach((text, i) => {
+                userFont._pointers.push(bitArray.length / userFont._height);
                 if (text == null || text.trim() === "") {
                     return;
                 }
                 const lines = text.split("\n");
                 const maxLineLen = Math.max(...lines.map(line => line.length), 1);
                 for (let col = 0; col < maxLineLen; col++) {
-                    for (let row = 0; row < userFont.height; row++) {
+                    for (let row = 0; row < userFont._height; row++) {
                         bitArray.push((lines[row]?.[col] || " ") === " " ? 0 : 1);
                     }
                 }
             });
-            userFont.pointers.push(bitArray.length / userFont.height); // Identify end of bitarray in byte-aligned bitmap
+            userFont._pointers.push(bitArray.length / userFont._height); // Identify end of bitarray in byte-aligned bitmap
             const bitmapLen = Math.ceil(bitArray.length / 8);
             const bitmap = new Uint8Array(bitmapLen);
             for (let i = 0; i < bitArray.length; i++) {
@@ -626,23 +630,27 @@
                     bitmap[Math.floor(i / 8)] |= 1 << (7 - (i % 8));
                 }
             }
-            userFont.bitmap = bitmap;
-            delete userFont.editorTexts;
-            fonts["UserFont"] = userFont;
+            userFont._bitmap = bitmap;
+            fonts["UserFont"] = {
+                height: userFont._height,
+                spacing: userFont._spacing,
+                pointers: userFont._pointers,
+                bitmap: userFont._bitmap
+            };
             renderSign();
         };
-        fontsDialog.addEventListener("close", saveUserFont);
+        onEvent(fontsDialog, "close", saveUserFont);
 
         function showFontsDialog() {
-            userFont.editorTexts = [];
-            for (let char = 0; char < userFont.pointers.length - 1; char++) {
-                const startIndex = userFont.pointers[char] * userFont.height;
-                const endIndex = userFont.pointers[char + 1] * userFont.height;
-                const charText = Array(userFont.height).fill("");
+            userFont._editorTexts = [];
+            for (let char = 0; char < userFont._pointers.length - 1; char++) {
+                const startIndex = userFont._pointers[char] * userFont._height;
+                const endIndex = userFont._pointers[char + 1] * userFont._height;
+                const charText = Array(userFont._height).fill("");
                 for (let i = startIndex; i < endIndex; i++) {
-                    charText[i % userFont.height] += (userFont.bitmap[i >> 3] & (1 << (7 - (i % 8)))) ? "X" : " ";
+                    charText[i % userFont._height] += (userFont._bitmap[i >> 3] & (1 << (7 - (i % 8)))) ? "X" : " ";
                 }
-                userFont.editorTexts.push(charText.map(line => line.trimEnd()).join("\n"));
+                userFont._editorTexts.push(charText.map(line => line.trimEnd()).join("\n"));
             }
             renderCharTextareas();
             fontsDialog.showModal();
@@ -675,10 +683,11 @@
                 </tr>
             `;
         }
-        document.querySelector("#move-screens").innerHTML += moveDivBody;
-        document.querySelector("#screen").innerHTML += screenDivBody;
-        document.querySelector("#clear-screen").innerHTML += clearDivBody;
-        document.querySelector("#text tbody").innerHTML = textTableBody;
+        querySelector("#move-screens").innerHTML += moveDivBody;
+        querySelector("#screen").innerHTML += screenDivBody;
+        querySelector("#clear-screen").innerHTML += clearDivBody;
+        querySelector("#text tbody").innerHTML = textTableBody;
+        getElementById("app").removeAttribute("style");
 
         let signData;
         const emptyScreenData = {
@@ -690,13 +699,13 @@
         };
         const emptySignData = () => {
             signData = JSON.parse(JSON.stringify({ screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
-            document.getElementById("size").value = "16x160";
+            getElementById("size").value = "16x160";
             updateGlobalAttr("size", "16x160");
-            document.getElementById("color").value = "amber";
+            getElementById("color").value = "amber";
             updateGlobalAttr("color", "amber");
-            document.getElementById("shape").value = "square";
+            getElementById("shape").value = "square";
             updateGlobalAttr("shape", "square");
-            ["sign-code", "name1", "name2"].forEach(id => document.getElementById(id).value = "");
+            ["sign-code", "name1", "name2"].forEach(id => getElementById(id).value = "");
         };
         emptySignData();
 
@@ -721,11 +730,11 @@
                 renderSign();
             }
         }
-        clearBtn.addEventListener("click", clearSign);
+        onEvent(clearBtn, "click", clearSign);
 
         function resizeSignContainer() {
-            const cw = document.getElementById("sign-container").clientWidth;
-            const ch = document.getElementById("sign-container").clientHeight;
+            const cw = getElementById("sign-container").clientWidth;
+            const ch = getElementById("sign-container").clientHeight;
             const aspectRatio = signEl.width / signEl.height;
             let borderWidth;
             if (ch * aspectRatio < cw) {
@@ -746,10 +755,10 @@
                 height: signEl.clientHeight
             }
         }
-        window.addEventListener("resize", resizeSignContainer);
+        onEvent(window, "resize", resizeSignContainer);
 
         function resizeSign() {
-            document.querySelectorAll(".sign-canvas:not(#sign-container > .sign-canvas)").forEach(canvas => {
+            querySelectorAll(".sign-canvas:not(#sign-container > .sign-canvas)").forEach(canvas => {
                 canvas.width = signData.width;
                 canvas.height = signData.height;
             });
@@ -757,25 +766,25 @@
             signEl.height = signData.height * 6 - 2;
             resizeSignContainer();
         }
-        document.getElementById("size").addEventListener("change", resizeSign);
+        onEvent(getElementById("size"), "change", resizeSign);
         resizeSign();
     
         function changeScreen(screen) {
-            document.getElementById(`screen-${screen}`).checked = true;
+            getElementById(`screen-${screen}`).checked = true;
             currentScreen = screen;
             for (let i = 1; i <= 8; i++) {
                 const lineData = signData.screens[screen - 1][i - 1];
-                document.getElementById(`x-${i}`).value = lineData.x;
-                document.getElementById(`y-${i}`).value = lineData.y;
-                document.getElementById(`font-${i}`).value = lineData.font;
-                document.getElementById(`invert-${i}`).checked = lineData.invert;
-                document.getElementById(`text-${i}`).value = lineData.text;
-                document.getElementById(`text-${i}`).placeholder = `Screen ${screen} Line ${i}`;
+                getElementById(`x-${i}`).value = lineData.x;
+                getElementById(`y-${i}`).value = lineData.y;
+                getElementById(`font-${i}`).value = lineData.font;
+                getElementById(`invert-${i}`).checked = lineData.invert;
+                getElementById(`text-${i}`).value = lineData.text;
+                getElementById(`text-${i}`).placeholder = `Screen ${screen} Line ${i}`;
             }
             renderScreen(screen);
         }
-        document.querySelectorAll('input[name="screen"]').forEach(radio => {
-            radio.addEventListener("change", changeScreen.bind(null, parseInt(radio.value)));
+        querySelectorAll('input[name="screen"]').forEach(radio => {
+            onEvent(radio, "change", changeScreen.bind(null, parseInt(radio.value)));
         });
 
         const pixelShapes = {
@@ -895,7 +904,7 @@
             signCtx.fillRect(0, 0, signEl.width, signEl.height);
 
             const signWidth = signEl.width, signHeight = signEl.height;
-            const previewCtx = document.getElementById(`preview-${screen}`).getContext("2d");
+            const previewCtx = getElementById(`preview-${screen}`).getContext("2d");
             const previewWidth = previewCtx.canvas.width, previewHeight = previewCtx.canvas.height;
 
             const signImageData = signCtx.getImageData(0, 0, signWidth, signHeight);
@@ -919,8 +928,8 @@
             if (playSignInterval) {
                 clearInterval(playSignInterval);
                 playSignInterval = null;
-                document.getElementById("controls").removeAttribute("data-playing");
-                document.getElementById("play-pause").textContent = "Play";
+                getElementById("controls").removeAttribute("data-playing");
+                getElementById("play-pause").textContent = "Play";
             } else {
                 if (screensWithData() < 2) {
                     if (isEmbedded) {
@@ -929,13 +938,13 @@
                     alert("Sign must have at least 2 non-empty screens to play.");
                     return;
                 }
-                document.getElementById("controls").setAttribute("data-playing", "true");
+                getElementById("controls").setAttribute("data-playing", "true");
                 changeScreen(nextNonEmptyScreen(currentScreen - 1));
-                playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), parseInt(document.getElementById("play-speed").value));
-                document.getElementById("play-pause").textContent = "Pause";
+                playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), parseInt(getElementById("play-speed").value));
+                getElementById("play-pause").textContent = "Pause";
             }
         }
-        document.getElementById("play-pause").addEventListener("click", playPauseSign);
+        onEvent(getElementById("play-pause"), "click", playPauseSign);
 
         let gifWorkerScript;
         /* async */ function exportGif() {
@@ -955,7 +964,7 @@
                 width: is88x31 ? 88 : signEl.width,
                 height: is88x31 ? 31 : signEl.height
             });
-            const delay = parseInt(document.getElementById("play-speed").value);
+            const delay = parseInt(getElementById("play-speed").value);
             const origScreen = currentScreen;
             const firstScreen = nextNonEmptyScreen(8);
 
@@ -994,14 +1003,14 @@
                 const a = document.createElement("a");
                 a.style.display = "none";
                 a.href = URL.createObjectURL(blob);
-                a.download = document.getElementById("sign-code").value || "sign" + ".gif";
+                a.download = getElementById("sign-code").value || "sign" + ".gif";
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
             });
             gif.render();
         }
-        document.getElementById("export-gif").addEventListener("click", exportGif);
+        onEvent(getElementById("export-gif"), "click", exportGif);
 
         function renderSign() {
             for (let i = 0; i < 8; i++) {
@@ -1013,7 +1022,7 @@
         function updateGlobalAttr(attr, value) {
             if (attr === "size") {
                 [signData.height, signData.width] = value.split("x").map(Number);
-                document.querySelectorAll("option[data-allowed-sizes], option[data-disallowed-sizes]").forEach(option => {
+                querySelectorAll("option[data-allowed-sizes], option[data-disallowed-sizes]").forEach(option => {
                     const attr = option.parentElement.id;
                     if (option.dataset.allowedSizes) {
                         option.disabled = !option.dataset.allowedSizes.split(" ").includes(value);
@@ -1021,8 +1030,8 @@
                         option.disabled = option.dataset.disallowedSizes.split(" ").includes(value);
                     }
                     if (option.disabled && option.selected) {
-                        const fallback = document.querySelector(`#${attr} option:not([disabled])`).value;
-                        document.getElementById(attr).value = fallback;
+                        const fallback = querySelector(`#${attr} option:not([disabled])`).value;
+                        getElementById(attr).value = fallback;
                         signData[attr] = fallback;
                     }
                 });
@@ -1033,14 +1042,14 @@
             renderSign();
         }
         ["size", "color", "shape"].forEach(attr => {
-            document.getElementById(attr).addEventListener("change", () => updateGlobalAttr(attr, document.getElementById(attr).value));
+            onEvent(getElementById(attr), "change", () => updateGlobalAttr(attr, getElementById(attr).value));
         });
 
         function updateLineAttr(line, attr, value) {
             const lineData = signData.screens[currentScreen - 1][line - 1];
             if (attr === "text" && fonts[lineData.font].upperCaseOnly) {
                 value = value.toUpperCase();
-                const textInput = document.getElementById(`text-${line}`);
+                const textInput = getElementById(`text-${line}`);
                 const cursorPos = textInput.selectionStart;
                 textInput.value = value;
                 textInput.focus();
@@ -1068,29 +1077,29 @@
         }
 
         for (let i = 8; i >= 1; i--) {
-            document.getElementById(`move-up-${i}`).addEventListener("click", () => moveScreenUp(i));
-            document.getElementById(`move-down-${i}`).addEventListener("click", () => moveScreenDown(i));
-            document.getElementById(`clear-screen-${i}`).addEventListener("click", () => {
+            onEvent(getElementById(`move-up-${i}`), "click", () => moveScreenUp(i));
+            onEvent(getElementById(`move-down-${i}`), "click", () => moveScreenDown(i));
+            onEvent(getElementById(`clear-screen-${i}`), "click", () => {
                 signData.screens[i - 1] = JSON.parse(JSON.stringify(Array(8).fill(emptyScreenData)));
                 if (currentScreen === i) {
                     changeScreen(currentScreen); // Update UI
                 }
                 renderScreen(i);
             });
-            document.getElementById(`x-${i}`).addEventListener("input", () => updateLineAttr(i, "x", parseInt(document.getElementById(`x-${i}`).value)));
-            document.getElementById(`y-${i}`).addEventListener("input", () => updateLineAttr(i, "y", parseInt(document.getElementById(`y-${i}`).value)));
-            document.getElementById(`font-${i}`).addEventListener("change", () => {
-                const selectedFont = document.getElementById(`font-${i}`).value;
+            onEvent(getElementById(`x-${i}`), "input", () => updateLineAttr(i, "x", parseInt(getElementById(`x-${i}`).value)));
+            onEvent(getElementById(`y-${i}`), "input", () => updateLineAttr(i, "y", parseInt(getElementById(`y-${i}`).value)));
+            onEvent(getElementById(`font-${i}`), "change", () => {
+                const selectedFont = getElementById(`font-${i}`).value;
                 if (selectedFont === "Edit..." || (selectedFont === "UserFont"  && !fonts.UserFont)) {
-                    document.getElementById(`font-${i}`).value = signData.screens[currentScreen - 1][i - 1].font; // Reset to previous font
+                    getElementById(`font-${i}`).value = signData.screens[currentScreen - 1][i - 1].font; // Reset to previous font
                     showFontsDialog();
                 } else {
                     updateLineAttr(i, "font", selectedFont);
-                    updateLineAttr(i, "text", document.getElementById(`text-${i}`).value); // Check for upperCaseOnly after font change
+                    updateLineAttr(i, "text", getElementById(`text-${i}`).value); // Check for upperCaseOnly after font change
                 }
             });
-            document.getElementById(`invert-${i}`).addEventListener("change", () => updateLineAttr(i, "invert", document.getElementById(`invert-${i}`).checked));
-            document.getElementById(`text-${i}`).addEventListener("input", () => updateLineAttr(i, "text", document.getElementById(`text-${i}`).value));
+            onEvent(getElementById(`invert-${i}`), "change", () => updateLineAttr(i, "invert", getElementById(`invert-${i}`).checked));
+            onEvent(getElementById(`text-${i}`), "input", () => updateLineAttr(i, "text", getElementById(`text-${i}`).value));
         }
 
         const serializationVersion = 1; // TODO: Increment after changing serialization format
@@ -1100,37 +1109,37 @@
 
         class Serializer {
             constructor() {
-                this.data = [serializationVersion];
+                this._data = [serializationVersion];
             }
-            boolean(value) {
-                this.data.push(value ? 1 : 0);
+            _boolean(value) {
+                this._data.push(value ? 1 : 0);
             }
-            uint8(value) {
-                this.data.push(value & 0xFF);
+            _uint8(value) {
+                this._data.push(value & 0xFF);
             }
-            int16(value) {
-                this.data.push((value >> 8) & 0xFF, value & 0xFF);
+            _int16(value) {
+                this._data.push((value >> 8) & 0xFF, value & 0xFF);
             }
-            string(value) {
-                this.uint8(value.length);
-                this.data.push(...value.split("").map(c => c.charCodeAt(0)));
+            _string(value) {
+                this._uint8(value.length);
+                this._data.push(...value.split("").map(c => c.charCodeAt(0)));
             }
-            select(id) {
-                this.uint8(document.getElementById(id).selectedIndex);
+            _select(id) {
+                this._uint8(getElementById(id).selectedIndex);
             }
-            optionalObjects(objectName) {
-                this.uint8(Object.keys(optionalObjSerDes).indexOf(objectName));
+            _optionalObjects(objectName) {
+                this._uint8(Object.keys(optionalObjSerDes).indexOf(objectName));
                 optionalObjSerDes[objectName][0](this);
             }
-            async serialize() {
-                return compressBase64(new Uint8Array(this.data));
+            async _serialize() {
+                return compressBase64(new Uint8Array(this._data));
             }
         }
         class Deserializer {
             constructor(data) {
-                this.data = data;
+                this._data = data;
                 this.offset = 0;
-                const dataVersion = this.uint8();
+                const dataVersion = this._uint8();
                 if (dataVersion !== serializationVersion) {
                     this.versionValid = false;
                     alert(`ERROR: Invalid or outdated data format (expected ${serializationVersion}, got ${dataVersion}).`);
@@ -1138,110 +1147,115 @@
                     this.versionValid = true;
                 }
             }
-            static async deserialize(base64) {
+            static async _deserialize(base64) {
                 return new Deserializer(await decompressBase64(base64));
             }
-            boolean() {
-                return this.uint8() === 1;
+            _boolean() {
+                return this._uint8() === 1;
             }
-            uint8() {
-                return this.data[this.offset++];
+            _uint8() {
+                return this._data[this.offset++];
             }
-            int16() {
-                return ((this.data[this.offset++] << 8) | this.data[this.offset++]) << 16 >> 16;
+            _int16() {
+                return ((this._data[this.offset++] << 8) | this._data[this.offset++]) << 16 >> 16;
             }
-            string() {
-                const length = this.uint8();
-                const value = String.fromCharCode(...this.data.slice(this.offset, this.offset + length));
+            _string() {
+                const length = this._uint8();
+                const value = String.fromCharCode(...this._data.slice(this.offset, this.offset + length));
                 this.offset += length;
                 return value;
             }
-            select(id) {
-                document.getElementById(id).selectedIndex = this.uint8();
+            _select(id) {
+                getElementById(id).selectedIndex = this._uint8();
             }
-            optionalObjects() {
-                while (this.offset < this.data.length) {
-                    const objectName = Object.keys(optionalObjSerDes)[this.uint8()];
+            _optionalObjects() {
+                while (this.offset < this._data.length) {
+                    const objectName = Object.keys(optionalObjSerDes)[this._uint8()];
                     optionalObjSerDes[objectName][1](this);
                 }
             }
         }
 
         function serializeUserFont(ser) {
-            ser.uint8(userFont.height);
-            ser.uint8(userFont.spacing);
-            ser.uint8(userFont.pointers.length);
-            userFont.pointers.forEach(pointer => ser.int16(pointer));
-            ser.int16(userFont.bitmap.length);
-            userFont.bitmap.forEach(byte => ser.uint8(byte));
+            ser._uint8(userFont._height);
+            ser._uint8(userFont._spacing);
+            ser._uint8(userFont._pointers.length);
+            userFont._pointers.forEach(pointer => ser._int16(pointer));
+            ser._int16(userFont._bitmap.length);
+            userFont._bitmap.forEach(byte => ser._uint8(byte));
         }
 
         function deserializeUserFont(des) {
-            userFont.height = des.uint8();
-            userFont.spacing = des.uint8();
-            userFont.pointers = Array(des.uint8()).fill().map(() => des.int16());
-            userFont.bitmap = Uint8Array.from(Array(des.int16()).fill().map(() => des.uint8()));
-            fonts["UserFont"] = userFont;
-            document.getElementById("font-height").value = userFont.height;
-            document.getElementById("font-spacing").value = userFont.spacing;
+            userFont._height = des._uint8();
+            userFont._spacing = des._uint8();
+            userFont._pointers = Array(des._uint8()).fill().map(() => des._int16());
+            userFont._bitmap = Uint8Array.from(Array(des._int16()).fill().map(() => des._uint8()));
+            fonts["UserFont"] = {
+                height: userFont._height,
+                spacing: userFont._spacing,
+                pointers: userFont._pointers,
+                bitmap: userFont._bitmap
+            };
+            getElementById("font-height").value = userFont._height;
+            getElementById("font-spacing").value = userFont._spacing;
             changeFontHeight();
         }
 
         function serializeScreen(ser, screen) {
             screen.forEach(line => {
-                ser.int16(line.x);
-                ser.int16(line.y);
-                ser.uint8(sortedFonts.indexOf(line.font));
-                ser.boolean(line.invert);
-                ser.string(line.text);
+                ser._int16(line.x);
+                ser._int16(line.y);
+                ser._uint8(sortedFonts.indexOf(line.font));
+                ser._boolean(line.invert);
+                ser._string(line.text);
             });
         }
 
         function deserializeScreen(des) {
             return Array(8).fill().map(() => ({
-                x: des.int16(),
-                y: des.int16(),
-                font: sortedFonts[des.uint8()],
-                invert: des.boolean(),
-                text: des.string()
+                x: des._int16(),
+                y: des._int16(),
+                font: sortedFonts[des._uint8()],
+                invert: des._boolean(),
+                text: des._string()
             }));
         }
 
         async function serializeSign() {
             const ser = new Serializer();
-            ser.int16(document.getElementById("play-speed").value);
-            ser.select("size");
-            ser.select("color");
-            ser.select("shape");
-            ser.int16(document.getElementById("sign-code").value || 0);
-            ser.string(document.getElementById("name1").value);
-            ser.string(document.getElementById("name2").value);
+            ser._int16(getElementById("play-speed").value);
+            ser._select("size");
+            ser._select("color");
+            ser._select("shape");
+            ser._int16(getElementById("sign-code").value || 0);
+            ser._string(getElementById("name1").value);
+            ser._string(getElementById("name2").value);
             signData.screens.forEach(screen => serializeScreen(ser, screen));
             if (userFontInUse()) {
-                ser.optionalObjects("userFont");
+                ser._optionalObjects("userFont");
             }
-            return ser.serialize();
+            return ser._serialize();
         }
 
         async function deserializeSign(base64) {
-            const des = await Deserializer.deserialize(base64);
+            const des = await Deserializer._deserialize(base64);
             if (!des.versionValid) {
                 return;
             }
-            document.getElementById("play-speed").value = des.int16();
-            document.getElementById("size").selectedIndex = des.uint8();
-            updateGlobalAttr("size", document.getElementById("size").value);
-            document.getElementById("color").selectedIndex = des.uint8();
-            updateGlobalAttr("color", document.getElementById("color").value);
-            document.getElementById("shape").selectedIndex = des.uint8();
-            updateGlobalAttr("shape", document.getElementById("shape").value);
-            document.getElementById("sign-code").value = des.int16() || "";
-            document.getElementById("name1").value = des.string();
-            document.getElementById("name2").value = des.string();
+            getElementById("play-speed").value = des._int16();
+            getElementById("size").selectedIndex = des._uint8();
+            updateGlobalAttr("size", getElementById("size").value);
+            getElementById("color").selectedIndex = des._uint8();
+            updateGlobalAttr("color", getElementById("color").value);
+            getElementById("shape").selectedIndex = des._uint8();
+            updateGlobalAttr("shape", getElementById("shape").value);
+            getElementById("sign-code").value = des._int16() || "";
+            getElementById("name1").value = des._string();
+            getElementById("name2").value = des._string();
             for (let screen = 0; screen < 8; screen++) {
                 signData.screens[screen] = deserializeScreen(des);
             }
-            des.optionalObjects();
+            des._optionalObjects();
             changeScreen(1);
             renderSign();
             if (isEmbedded) {
@@ -1252,11 +1266,13 @@
         if (pageUrl.searchParams.has("data")) {
             deserializeSign(pageUrl.searchParams.get("data"));
             pageUrl.searchParams.delete("data");
-            window.history.replaceState({}, "", pageUrl.href);
+            if (!isEmbedded) {
+                window.history.replaceState({}, "", pageUrl.href);
+            }
         }
 
-        window.addEventListener("paste", async e => {
-            if (document.querySelector("dialog[open]")) {
+        onEvent(window, "paste", async e => {
+            if (querySelector("dialog[open]")) {
                 return; // Don't paste into the editor if a dialog is open
             }
             const pastedData = (e.clipboardData || window.clipboardData).getData("text");
@@ -1278,7 +1294,7 @@
             ].forEach(([prefix, callback]) => {
                 if (pastedData.startsWith(prefix)) {
                     e.preventDefault();
-                    Deserializer.deserialize(pastedData.slice(prefix.length)).then(des => {
+                    Deserializer._deserialize(pastedData.slice(prefix.length)).then(des => {
                         if (!des.versionValid) {
                             return;
                         }
@@ -1288,36 +1304,36 @@
             });
         });
 
-        document.getElementById("share").addEventListener("click", async () => {
+        onEvent(getElementById("share"), "click", async () => {
             await pageUrl.searchParams.set("data", await serializeSign());
-            document.getElementById("share-url").value = pageUrl.href;
-            document.getElementById("embed-code").value = `<iframe src="${pageUrl.href}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`;
+            getElementById("share-url").value = pageUrl.href;
+            getElementById("embed-code").value = `<iframe src="${pageUrl.href}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`;
             const screenSer = new Serializer();
             serializeScreen(screenSer, signData.screens[currentScreen - 1]);
-            document.getElementById("current-screen").value = `lh-editor-screen-data://${await screenSer.serialize()}`;
+            getElementById("current-screen").value = `lh-editor-screen-data://${await screenSer._serialize()}`;
             if (userFontInUse()) {
                 const userFontSer = new Serializer();
                 serializeUserFont(userFontSer);
-                document.getElementById("user-font").value = `lh-editor-user-font://${await userFontSer.serialize()}`;
+                getElementById("user-font").value = `lh-editor-user-font://${await userFontSer._serialize()}`;
             } else {
-                document.getElementById("user-font").value = "";
+                getElementById("user-font").value = "";
             }
             shareDialog.showModal();
         });
 
         ["share-url", "embed-code", "current-screen", "user-font"].forEach(id => {
-            document.getElementById(`copy-${id}`).addEventListener("click", e => {
-                navigator.clipboard.writeText(document.getElementById(id).value).then(() => {
+            onEvent(getElementById(`copy-${id}`), "click", e => {
+                navigator.clipboard.writeText(getElementById(id).value).then(() => {
                     e.target.textContent = "Copied!";
                     setTimeout(() => e.target.textContent = "Copy", 1000);
                 });
             });
         });
-        document.getElementById("close-share").addEventListener("click", () => shareDialog.close());
+        onEvent(getElementById("close-share"), "click", () => shareDialog.close());
 
         function exportFile() {
             const esc = str => `"${str.replaceAll('"', '\\"')}"`;
-            let fileStr = esc(document.getElementById("name1").value) + "\n" + esc(document.getElementById("name2").value);
+            let fileStr = esc(getElementById("name1").value) + "\n" + esc(getElementById("name2").value);
             for (let screen = 0; screen < 8; screen++) {
                 for (let line = 0; line < 8; line++) {
                     const lineData = signData.screens[screen][line];
@@ -1327,16 +1343,16 @@
             const a = document.createElement("a");
             a.style.display = "none";
             a.href = URL.createObjectURL(new Blob([fileStr], { type: "text/plain;charset=utf-8" }));
-            a.download = document.getElementById("sign-code").value || "sign" + ".txt";
+            a.download = getElementById("sign-code").value || "sign" + ".txt";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
-        document.getElementById("export").addEventListener("click", exportFile);
+        onEvent(getElementById("export"), "click", exportFile);
 
         function importFile() {
             const unEsc = str => str.slice(1, -1).replaceAll('\\"', '"');
-            const file = document.getElementById("import-file").files[0];
+            const file = getElementById("import-file").files[0];
             if (!file) {
                 return;
             } else if (file.type !== "text/plain" || !file.name.endsWith(".txt")) {
@@ -1353,10 +1369,10 @@
                 emptySignData();
                 const signCode = file.name.match(/^\d{1,4}.txt$/);
                 if (signCode) {
-                    document.getElementById("sign-code").value = parseInt(signCode[0]);
+                    getElementById("sign-code").value = parseInt(signCode[0]);
                 }
-                document.getElementById("name1").value = unEsc(lines[0]);
-                document.getElementById("name2").value = unEsc(lines[1]);
+                getElementById("name1").value = unEsc(lines[0]);
+                getElementById("name2").value = unEsc(lines[1]);
                 for (let screen = 0; screen < 8; screen++) {
                     for (let line = 0; line < 8; line++) {
                         const lineData = lines[2 + screen * 8 + line].split(",");
@@ -1372,11 +1388,11 @@
             }
             reader.readAsText(file);
         }
-        document.getElementById("import").addEventListener("click", () => document.getElementById("import-file").click());
-        document.getElementById("import-file").addEventListener("change", importFile);
+        onEvent(getElementById("import"), "click", () => getElementById("import-file").click());
+        onEvent(getElementById("import-file"), "change", importFile);
 
         if (!isEmbedded) {
-            window.addEventListener("beforeunload", e => {
+            onEvent(window, "beforeunload", e => {
                 if (screensWithData() > 0) {
                     e.preventDefault();
                     e.returnValue = "";

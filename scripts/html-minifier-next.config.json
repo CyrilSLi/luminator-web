@@ -19,7 +19,10 @@
             "passes": 3
         },
         "mangle": {
-            "toplevel": true
+            "toplevel": true,
+            "properties": {
+                "regex": "^_[a-zA-Z0-9]+$"
+            }
         }
     },
     "minifySVG": true,
