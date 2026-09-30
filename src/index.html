@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEUAAAD/gAAgfBVpAAAAFUlEQVQI12MAggQ2IEJh5G4DIqxSAIRfBXfduOgpAAAAAElFTkSuQmCC">
-    <title>Luminator&reg; Horizon&trade; Web Editor</title>
+    <title>Luminator&reg; Horizon&trade; Web Editor (unofficial)</title>
     <style>
         * {
             touch-action: manipulation;
@@ -21,14 +21,8 @@
             padding: 0px !important;
         }
         h1 {
-            font-size: 22px;
+            font-size: 32px;
             font-weight: bold;
-            margin: auto 2.5px;
-        }
-        @media screen and (min-width: 480px) {
-            h1 {
-                font-size: 32px;
-            }
         }
         a, p, button, input, select, option, label, textarea {
             font-size: 16px;
@@ -64,17 +58,13 @@
         }
         #sign-container {
             flex: 1;
-            display: flex;
             justify-content: center;
-            align-items: center;
             overflow: hidden;
             image-rendering: pixelated;
             margin: 10px 0px;
         }
         #app {
             padding: 10px;
-            display: flex;
-            flex-direction: column;
             height: 100vh;
             height: 100dvh;
             width: 100%;
@@ -83,34 +73,32 @@
         body:not(.embedded) #app {
             min-height: 480px;
         }
-        #header, #controls {
+        #sign-container, fieldset, #char-editors, #settings, #app, #header, #controls, #header-group {
             display: flex;
-            flex-direction: row;
         }
         #header {
-            align-items: center;
-        }
-        body.embedded #header, #club-512kb {
-            display: none;
-        }
-        #header > span {
-            display: inline-flex;
-            flex-direction: row;
-            margin-left: 5px;
             flex-wrap: wrap;
         }
-        #mouse-pos, #club-512kb {
-            margin-left: auto;
+        #header-links {
+            display: inline-flex;
+            flex-wrap: wrap;
+            width: min-content;
+            row-gap: 5px;
         }
-        @media screen and (min-width: 820px) {
-            #mouse-pos[hidden] + #club-512kb {
-                display: block;
-            }
+        #header-links > a {
+            margin: 0px;
+        }
+        #header, #header-group, #header-links {
+            column-gap: 10px;
+        }
+        #mouse-pos {
+            width: 234.376px;
+            text-align: right;
         }
         #controls {
             overflow-y: hidden;
         }
-        body.embedded #controls {
+        body.embedded #controls, body.embedded #header {
             display: none;
         }
         #controls[data-playing="true"] {
@@ -122,15 +110,13 @@
             background-color: #ffcccc;
         }
         .vertical-divider {
-            margin: 0 10px;
+            margin: 0px 10px;
             border-left: 5px dashed black;
         }
-        #settings {
-            display: flex;
+        #settings, #app {
             flex-direction: column;
         }
         #text {
-            flex: 1;
             table-layout: fixed;
         }
         input:invalid {
@@ -140,7 +126,7 @@
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
-            margin: 0;
+            margin: 0px;
         }
         #text input[type="number"], #fonts-dialog input[type="number"] {
             width: 3em;
@@ -156,7 +142,7 @@
         }
         input[type="radio"] {
             position: absolute;
-            left: -9999px;
+            left: -100vw;
         }
         input[type="radio"]:checked + label > .sign-canvas {
             height: 75%;
@@ -166,15 +152,13 @@
             display: grid;
             place-items: center;
         }
-        #text col:not(:last-child), #settings input {
-            width: 0;
+        #text col:not(:last-child), #settings input, #mouse-pos:not([hidden]) + #club-512kb {
+            width: 0px;
         }
-        fieldset {
-            display: flex;
-            flex-direction: row;
+        fieldset, #header, #header-group, #sign-container {
             align-items: center;
         }
-        #settings fieldset :is(input, select, button) {
+        #settings fieldset :is(input, select, button), #header-group, #text, #header-links {
             flex: 1;
         }
         .screen-col {
@@ -200,15 +184,13 @@
         dialog::backdrop {
             background-color: rgba(0, 0, 0, 0.5);
         }
-        #share-dialog > input {
+        #share-dialog > input, #share-dialog > p {
             margin-bottom: 12.5px;
         }
         #move-screens > span {
             min-width: max-content;
         }
         #char-editors {
-            display: flex;
-            flex-direction: row;
             overflow-x: auto;
         }
         #char-editors > .char-editor:first-child .move-char-left, #char-editors > .char-editor:last-child .move-char-right {
@@ -246,12 +228,14 @@
 <body>
     <div id="app" style="visibility: hidden;">
         <div id="header">
-            <h1>Luminator&reg;&nbsp;Horizon&trade;</h1>
-            <span>
-                <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
-                <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
-            </span>
-            <p id="mouse-pos" hidden>Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
+            <h1>Horizon&trade;&nbsp;Web&nbsp;Editor</h1>
+            <div id="header-group">
+                <span id="header-links">
+                    <a href="https://github.com/CyrilSLi/luminator-web" target="_blank" rel="noopener noreferrer">View&nbsp;Source</a>
+                    <a href="https://github.com/CyrilSLi/luminator-web/issues" target="_blank" rel="noopener noreferrer">Report&nbsp;Issue</a>
+                </span>
+                <p id="mouse-pos" hidden>Pixel:&nbsp;(<span id="mouse-x"></span>,&nbsp;<span id="mouse-y"></span>)</p>
+            </div>
         </div>
         <div id="sign-container">
             <canvas class="sign-canvas" id="sign" title="Click to enter full screen" style="width: 0px;"></canvas>
@@ -353,6 +337,7 @@
         </div>
     </div>
     <dialog id="share-dialog">
+        <p>This project is not affiliated with Luminator Technology Group, and is not intended for use with real Luminator signs or software. All trademarks and copyright belong to their respective owners.</p>
         <fieldset>
             <button id="copy-share-url">Copy</button>
             <p>Share link:</p>
@@ -420,7 +405,7 @@
         };
 
         const fonts = "%FONTS_JSON%";
-        getElementById("header").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
+        getElementById("header-group").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
 
         let currentScreen = 1;
         let playSignInterval = null;
@@ -448,22 +433,14 @@
             });
         }
 
-        function showMousePox(ev) {
-            const x = (ev.clientX - signPos.left) / signPos.width * signEl.width;
-            const y = (ev.clientY - signPos.top) / signPos.height * signEl.height;
+        onEvent(signEl, "mousemove", e => {
+            const x = (e.clientX - signPos.left) / signPos.width * signEl.width;
+            const y = (e.clientY - signPos.top) / signPos.height * signEl.height;
             getElementById("mouse-x").textContent = Math.max(1, Math.min(Math.floor((x + 1) / 6) + 1, signData.width));
             getElementById("mouse-y").textContent = Math.max(1, Math.min(Math.floor((y + 1) / 6) + 1, signData.height));
-        }
-        onEvent(signEl, "mouseenter", () => {
-            if (window.matchMedia("(min-width: 700px)").matches) {
-                getElementById("mouse-pos").removeAttribute("hidden");
-                onEvent(signEl, "mousemove", showMousePox);
-            }
         });
-        onEvent(signEl, "mouseleave", () => {
-            getElementById("mouse-pos").setAttribute("hidden", "");
-            onEvent(signEl, "mousemove", showMousePox);
-        });
+        onEvent(signEl, "mouseenter", () => getElementById("mouse-pos").removeAttribute("hidden"));
+        onEvent(signEl, "mouseleave", () => getElementById("mouse-pos").setAttribute("hidden", ""));
 
         const defaultFont = "16DVW";
         const fontCharset = fonts.__charset__;
