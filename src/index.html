@@ -434,7 +434,8 @@
         let signPos;
         let userFont;
 
-        const { href: pageUrlHref, searchParams: pageUrlParams } = new URL(window.location.href);
+        const pageUrl = new URL(window.location.href);
+        const pageUrlParams = pageUrl.searchParams;
         const clearBtn = getElementById("clear");
         const shareDialog = getElementById("share-dialog");
         const fontsDialog = getElementById("fonts-dialog");
@@ -458,8 +459,8 @@
         onEvent(signEl, "mousemove", e => {
             const x = (e.clientX - signPos.left) / signPos.width * signWidth;
             const y = (e.clientY - signPos.top) / signPos.height * signHeight;
-            getElementById("mouse-x").textContent = mathLib.max(1, mathLib.min(mathLib.floor((x + 1) / 6) + 1, signData.width));
-            getElementById("mouse-y").textContent = mathLib.max(1, mathLib.min(mathLib.floor((y + 1) / 6) + 1, signData.height));
+            getElementById("mouse-x").textContent = mathLib.max(1, mathLib.min(mathLib.floor((x + 1) / 6) + 1, signData._width));
+            getElementById("mouse-y").textContent = mathLib.max(1, mathLib.min(mathLib.floor((y + 1) / 6) + 1, signData._height));
         });
         onEvent(signEl, "mouseenter", () => getElementById("mouse-pos").removeAttribute("hidden"));
         onEvent(signEl, "mouseleave", () => getElementById("mouse-pos").setAttribute("hidden", ""));
@@ -697,7 +698,7 @@
             text: ""
         };
         const emptySignData = () => {
-            signData = JSON.parse(JSON.stringify({ screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
+            signData = JSON.parse(JSON.stringify({ _screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
             setElValue("size", "16x160");
             updateGlobalAttr("size", "16x160");
             setElValue("color", "amber");
@@ -708,15 +709,15 @@
         };
         emptySignData();
 
-        const screensWithData = () => signData.screens.filter(screen => screen.some(line => line.text !== "")).length;
-        const userFontInUse = () => fonts.UserFont && signData.screens.filter(screen => screen.some(line => line.font === "UserFont")).length > 0;
+        const screensWithData = () => signData._screens.filter(screen => screen.some(line => line.text !== "")).length;
+        const userFontInUse = () => fonts.UserFont && signData._screens.filter(screen => screen.some(line => line.font === "UserFont")).length > 0;
 
         if (isEmbedded) {
             bodyEl.classList.add("embedded");
             pageUrlParams.delete("embed");
             const linkWrapper = createElement("a");
             linkWrapper.rel = "noopener noreferrer";
-            linkWrapper.href = pageUrlHref;
+            linkWrapper.href = pageUrl.href;
             linkWrapper.target = "_blank";
             signEl.parentNode.insertBefore(linkWrapper, signEl);
             linkWrapper.appendChild(signEl);
@@ -758,11 +759,11 @@
 
         function resizeSign() {
             querySelectorAll(".sign-canvas:not(#sign-container > .sign-canvas)").forEach(canvas => {
-                canvas.width = signData.width;
-                canvas.height = signData.height;
+                canvas.width = signData._width;
+                canvas.height = signData._height;
             });
-            signWidth = signEl.width = signData.width * 6 - 2;
-            signHeight = signEl.height = signData.height * 6 - 2;
+            signWidth = signEl.width = signData._width * 6 - 2;
+            signHeight = signEl.height = signData._height * 6 - 2;
             resizeSignContainer();
         }
         onEvent(getElementById("size"), "change", resizeSign);
@@ -772,7 +773,7 @@
             getElementById(`screen-${screen}`).checked = true;
             currentScreen = screen;
             for (let i = 1; i <= 8; i++) {
-                const lineData = signData.screens[screen - 1][i - 1];
+                const lineData = signData._screens[screen - 1][i - 1];
                 setElValue(`x-${i}`, lineData.x);
                 setElValue(`y-${i}`, lineData.y);
                 setElValue(`font-${i}`, lineData.font);
@@ -801,7 +802,7 @@
             ]
         }
         function drawPixel(imagePixels, previewPixels, x, y) {
-            if (x < 0 || x >= signData.width || y < 0 || y >= signData.height) {
+            if (x < 0 || x >= signData._width || y < 0 || y >= signData._height) {
                 return;
             }
             let pixelColor;
@@ -823,7 +824,7 @@
             for (let row = 0; row < 4; row++) {
                 imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 255]).flat(), ((y * 6 + row) * signWidth + x * 6) * 4);
             }
-            previewPixels.set(pixelColor, (y * signData.width + x) * 4);
+            previewPixels.set(pixelColor, (y * signData._width + x) * 4);
         }
 
         function drawString(imagePixels, previewPixels, font, str, x, y, invert) {
@@ -908,7 +909,7 @@
             const signImageData = signCtx.getImageData(0, 0, signWidth, signHeight);
             const previewData = previewCtx.createImageData(previewWidth, previewHeight);
             for (let line = 0; line < 8; line++) {
-                const lineData = signData.screens[screen - 1][line];
+                const lineData = signData._screens[screen - 1][line];
                 drawString(signImageData.data, previewData.data, lineData.font, lineData.text, lineData.x - 1, lineData.y - 1, lineData.invert);
             }
             signCtx.putImageData(signImageData, 0, 0);
@@ -917,7 +918,7 @@
 
         function nextNonEmptyScreen(current) {
             let nextScreen = (current % 8) + 1;
-            while (!signData.screens[nextScreen - 1].some(line => line.text !== "")) {
+            while (!signData._screens[nextScreen - 1].some(line => line.text !== "")) {
                 nextScreen = (nextScreen % 8) + 1;
             }
             return nextScreen;
@@ -954,7 +955,7 @@
                 alert("Sign must have at least 1 non-empty screen to export as GIF.");
                 return;
             }
-            const is88x31 = signData.height === 10 && signData.width === 29;
+            const is88x31 = signData._height === 10 && signData._width === 29;
             const gif = new GIF({
                 workerScript: gifWorkerScript,
                 workers: 2,
@@ -1010,7 +1011,7 @@
 
         function updateGlobalAttr(attr, value) {
             if (attr === "size") {
-                [signData.height, signData.width] = value.split("x").map(Number);
+                [signData._height, signData._width] = value.split("x").map(Number);
                 querySelectorAll("option[data-allowed-sizes], option[data-disallowed-sizes]").forEach(option => {
                     const attr = option.parentElement.id;
                     if (option.dataset.allowedSizes) {
@@ -1035,7 +1036,7 @@
         });
 
         function updateLineAttr(line, attr, value) {
-            const lineData = signData.screens[currentScreen - 1][line - 1];
+            const lineData = signData._screens[currentScreen - 1][line - 1];
             if (attr === "text" && fonts[lineData.font].upperCaseOnly) {
                 value = value.toUpperCase();
                 const textInput = getElementById(`text-${line}`);
@@ -1052,7 +1053,7 @@
             if (screen <= 1) {
                 return;
             }
-            [signData.screens[screen - 2], signData.screens[screen - 1]] = [signData.screens[screen - 1], signData.screens[screen - 2]];
+            [signData._screens[screen - 2], signData._screens[screen - 1]] = [signData._screens[screen - 1], signData._screens[screen - 2]];
             changeScreen(currentScreen);
             renderSign();
         }
@@ -1060,7 +1061,7 @@
             if (screen >= 8) {
                 return;
             }
-            [signData.screens[screen - 1], signData.screens[screen]] = [signData.screens[screen], signData.screens[screen - 1]];
+            [signData._screens[screen - 1], signData._screens[screen]] = [signData._screens[screen], signData._screens[screen - 1]];
             changeScreen(currentScreen);
             renderSign();
         }
@@ -1069,7 +1070,7 @@
             onEvent(getElementById(`move-up-${i}`), clickStr, () => moveScreenUp(i));
             onEvent(getElementById(`move-down-${i}`), clickStr, () => moveScreenDown(i));
             onEvent(getElementById(`clear-screen-${i}`), clickStr, () => {
-                signData.screens[i - 1] = JSON.parse(JSON.stringify(Array(8).fill(emptyScreenData)));
+                signData._screens[i - 1] = JSON.parse(JSON.stringify(Array(8).fill(emptyScreenData)));
                 if (currentScreen === i) {
                     changeScreen(currentScreen); // Update UI
                 }
@@ -1080,7 +1081,7 @@
             onEvent(getElementById(`font-${i}`), "change", () => {
                 const selectedFont = getElValue(`font-${i}`);
                 if (selectedFont === "Edit..." || (selectedFont === "UserFont"  && !fonts.UserFont)) {
-                    setElValue(`font-${i}`, signData.screens[currentScreen - 1][i - 1].font); // Reset to previous font
+                    setElValue(`font-${i}`, signData._screens[currentScreen - 1][i - 1].font); // Reset to previous font
                     showFontsDialog();
                 } else {
                     updateLineAttr(i, "font", selectedFont);
@@ -1219,7 +1220,7 @@
             ser._int16(getElValue("sign-code") || 0);
             ser._string(getElValue("name1"));
             ser._string(getElValue("name2"));
-            signData.screens.forEach(screen => serializeScreen(ser, screen));
+            signData._screens.forEach(screen => serializeScreen(ser, screen));
             if (userFontInUse()) {
                 ser._optionalObjects("userFont");
             }
@@ -1242,7 +1243,7 @@
             setElValue("name1", des._string());
             setElValue("name2", des._string());
             for (let screen = 0; screen < 8; screen++) {
-                signData.screens[screen] = deserializeScreen(des);
+                signData._screens[screen] = deserializeScreen(des);
             }
             des._optionalObjects();
             changeScreen(1);
@@ -1256,7 +1257,7 @@
             deserializeSign(pageUrlParams.get("data"));
             pageUrlParams.delete("data");
             if (!isEmbedded) {
-                window.history.replaceState({}, "", pageUrlHref);
+                window.history.replaceState({}, "", pageUrl.href);
             }
         }
 
@@ -1271,7 +1272,7 @@
                     if (screen.some(line => line.font === "UserFont") && !fonts.UserFont) {
                         alert("ERROR: Please paste or create a UserFont before loading a screen using it.");
                     } else {
-                        signData.screens[currentScreen - 1] = screen;
+                        signData._screens[currentScreen - 1] = screen;
                     }
                     changeScreen(currentScreen);
                     renderScreen();
@@ -1295,10 +1296,10 @@
 
         onEvent(getElementById("share"), clickStr, async () => {
             await pageUrlParams.set("data", await serializeSign());
-            setElValue("share-url", pageUrlHref);
-            setElValue("embed-code", `<iframe src="${pageUrlHref}&embed=" width="${signData.width}" height="${signData.height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData.width} / ${signData.height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`);
+            setElValue("share-url", pageUrl.href);
+            setElValue("embed-code", `<iframe src="${pageUrl.href}&embed=" width="${signData._width}" height="${signData._height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData._width} / ${signData._height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`);
             const screenSer = new Serializer();
-            serializeScreen(screenSer, signData.screens[currentScreen - 1]);
+            serializeScreen(screenSer, signData._screens[currentScreen - 1]);
             setElValue("current-screen", `lh-editor-screen-data://${await screenSer._serialize()}`);
             if (userFontInUse()) {
                 const userFontSer = new Serializer();
@@ -1325,7 +1326,7 @@
             let fileStr = esc(getElValue("name1")) + "\n" + esc(getElValue("name2"));
             for (let screen = 0; screen < 8; screen++) {
                 for (let line = 0; line < 8; line++) {
-                    const lineData = signData.screens[screen][line];
+                    const lineData = signData._screens[screen][line];
                     fileStr += `\n${esc(lineData.text)},${lineData.x},${lineData.y},${esc(lineData.font)},${lineData.invert ? 1 : 0}`;
                 }
             }
@@ -1359,11 +1360,11 @@
                 for (let screen = 0; screen < 8; screen++) {
                     for (let line = 0; line < 8; line++) {
                         const lineData = lines[2 + screen * 8 + line].split(",");
-                        signData.screens[screen][line].text = unEsc(lineData[0]);
-                        signData.screens[screen][line].x = parseInt(lineData[1]);
-                        signData.screens[screen][line].y = parseInt(lineData[2]);
-                        signData.screens[screen][line].font = sortedFonts.includes(unEsc(lineData[3])) ? unEsc(lineData[3]) : defaultFont;
-                        signData.screens[screen][line].invert = lineData[4] === "1";
+                        signData._screens[screen][line].text = unEsc(lineData[0]);
+                        signData._screens[screen][line].x = parseInt(lineData[1]);
+                        signData._screens[screen][line].y = parseInt(lineData[2]);
+                        signData._screens[screen][line].font = sortedFonts.includes(unEsc(lineData[3])) ? unEsc(lineData[3]) : defaultFont;
+                        signData._screens[screen][line].invert = lineData[4] === "1";
                     }
                 }
                 changeScreen(1);
