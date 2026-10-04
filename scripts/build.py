@@ -42,4 +42,4 @@ with open(abs_path("../index.dev.html"), "w") as f:
 with open(abs_path("../src/index.unmin.html"), "w") as f:
     f.write(index_html)
 
-subprocess.run(["npx", "html-minifier-next", "-v", "-i", abs_path("../src/index.unmin.html"), "-o", abs_path("../index.html"), "-c", abs_path("../scripts/html-minifier-next.config.json")])
+subprocess.run(["html-minifier-next", "-v", "-i", abs_path("../src/index.unmin.html"), "-o", abs_path("../index.html"), "-c", abs_path("../scripts/html-minifier-next.config.json")])

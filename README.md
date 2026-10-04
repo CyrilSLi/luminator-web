@@ -16,10 +16,10 @@ A local web-based editor for transit destination signs, emulating the Luminator 
 
 ## Build
 
-1. Install `html-minifier-next`:
+1. Install `html-minifier-next <8.8.0`:
 
     ```bash
-    sudo npm install -g html-minifier-next
+    sudo npm install -g html-minifier-next@8.7.0
     ```
 2. Extract fonts from a `.ips` IPS project file using `mdb-export` (part of MDB Tools):
 

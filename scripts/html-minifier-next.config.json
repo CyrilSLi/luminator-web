@@ -27,7 +27,6 @@
     },
     "minifySVG": true,
     "minifyURLs": false,
-    "noNewlinesBeforeTagClose": true,
     "partialMarkup": false,
     "preserveLineBreaks": false,
     "preventAttributesEscaping": false,
