@@ -415,14 +415,9 @@
         }
 
         async function decompressBase64(base64, isText = false) {
-            base64 = base64.replaceAll("-", "+").replaceAll("_", "/");
-            base64 += "=".repeat((4 - base64.length % 4) % 4);
-            base64 = atob(base64);
-            const array = new Uint8Array(base64.length);
-            for (let i = 0; i < base64.length; i++) {
-                array[i] = base64.charCodeAt(i);
-            }
-            const data = new Uint8Array(await new Response(new Blob([array]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+            const data = new Uint8Array(await new Response(new Blob([Uint8Array.from(
+                atob(base64.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - base64.length % 4) % 4)), (c) => c.charCodeAt()
+            )]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
             return isText ? new TextDecoder().decode(data) : data;
         };
 
