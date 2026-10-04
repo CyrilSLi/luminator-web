@@ -379,6 +379,8 @@
         const querySelector = (sel) => document.querySelector(sel);
         const querySelectorAll = (sel) => document.querySelectorAll(sel);
         const onEvent = (el, e, fn) => el.addEventListener(e, fn);
+        const mathLib = Math;
+        let signWidth, signHeight;
 
         async function compressBase64(data) {
             const array = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
@@ -431,10 +433,10 @@
         }
 
         onEvent(signEl, "mousemove", e => {
-            const x = (e.clientX - signPos.left) / signPos.width * signEl.width;
-            const y = (e.clientY - signPos.top) / signPos.height * signEl.height;
-            getElementById("mouse-x").textContent = Math.max(1, Math.min(Math.floor((x + 1) / 6) + 1, signData.width));
-            getElementById("mouse-y").textContent = Math.max(1, Math.min(Math.floor((y + 1) / 6) + 1, signData.height));
+            const x = (e.clientX - signPos.left) / signPos.width * signWidth;
+            const y = (e.clientY - signPos.top) / signPos.height * signHeight;
+            getElementById("mouse-x").textContent = mathLib.max(1, mathLib.min(mathLib.floor((x + 1) / 6) + 1, signData.width));
+            getElementById("mouse-y").textContent = mathLib.max(1, mathLib.min(mathLib.floor((y + 1) / 6) + 1, signData.height));
         });
         onEvent(signEl, "mouseenter", () => getElementById("mouse-pos").removeAttribute("hidden"));
         onEvent(signEl, "mouseleave", () => getElementById("mouse-pos").setAttribute("hidden", ""));
@@ -537,7 +539,7 @@
             userFont._editorTexts[index] = el.value;
             const selectionStart = el.selectionStart;
             const lines = el.value.split("\n");
-            let maxLineLen = Math.max(...lines.slice(0, userFont._height).map(line => line.length), 1);
+            let maxLineLen = mathLib.max(...lines.slice(0, userFont._height).map(line => line.length), 1);
             if (lines.length > userFont._height) {
                 el.value = lines.slice(0, userFont._height).join("\n");
             } else if (lines.length < userFont._height) {
@@ -589,7 +591,7 @@
                     return;
                 }
                 const lines = text.split("\n");
-                const maxLineLen = Math.max(...lines.map(line => line.length), 1);
+                const maxLineLen = mathLib.max(...lines.map(line => line.length), 1);
                 for (let col = 0; col < maxLineLen; col++) {
                     for (let row = 0; row < userFont._height; row++) {
                         bitArray.push((lines[row]?.[col] || " ") === " " ? 0 : 1);
@@ -597,11 +599,11 @@
                 }
             });
             userFont._pointers.push(bitArray.length / userFont._height); // Identify end of bitarray in byte-aligned bitmap
-            const bitmapLen = Math.ceil(bitArray.length / 8);
+            const bitmapLen = mathLib.ceil(bitArray.length / 8);
             const bitmap = new Uint8Array(bitmapLen);
             for (let i = 0; i < bitArray.length; i++) {
                 if (bitArray[i]) {
-                    bitmap[Math.floor(i / 8)] |= 1 << (7 - (i % 8));
+                    bitmap[mathLib.floor(i / 8)] |= 1 << (7 - (i % 8));
                 }
             }
             userFont._bitmap = bitmap;
@@ -709,16 +711,16 @@
         function resizeSignContainer() {
             const cw = getElementById("sign-container").clientWidth;
             const ch = getElementById("sign-container").clientHeight;
-            const aspectRatio = signEl.width / signEl.height;
+            const aspectRatio = signWidth / signHeight;
             let borderWidth;
             if (ch * aspectRatio < cw) {
                 signEl.style.width = ch * aspectRatio + "px";
                 signEl.style.height = ch + "px";
-                borderWidth = Math.round(ch * 2 / signEl.height);
+                borderWidth = mathLib.round(ch * 2 / signHeight);
             } else {
                 signEl.style.width = cw + "px";
                 signEl.style.height = cw / aspectRatio + "px";
-                borderWidth = Math.round(cw * 2 / signEl.width);
+                borderWidth = mathLib.round(cw * 2 / signWidth);
             }
             signEl.style.borderWidth = borderWidth + "px";
             const rect = signEl.getBoundingClientRect();
@@ -736,8 +738,8 @@
                 canvas.width = signData.width;
                 canvas.height = signData.height;
             });
-            signEl.width = signData.width * 6 - 2;
-            signEl.height = signData.height * 6 - 2;
+            signWidth = signEl.width = signData.width * 6 - 2;
+            signHeight = signEl.height = signData.height * 6 - 2;
             resizeSignContainer();
         }
         onEvent(getElementById("size"), "change", resizeSign);
@@ -796,7 +798,7 @@
 
             }
             for (let row = 0; row < 4; row++) {
-                imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 255]).flat(), ((y * 6 + row) * signEl.width + x * 6) * 4);
+                imagePixels.set(pixelShapes[signData.shape][row].map((val, col) => val ? pixelColor : [0, 0, 0, 255]).flat(), ((y * 6 + row) * signWidth + x * 6) * 4);
             }
             previewPixels.set(pixelColor, (y * signData.width + x) * 4);
         }
@@ -875,9 +877,8 @@
             if (!Number.isInteger(screen)) {
                 screen = currentScreen;
             }
-            signCtx.fillRect(0, 0, signEl.width, signEl.height);
+            signCtx.fillRect(0, 0, signWidth, signHeight);
 
-            const signWidth = signEl.width, signHeight = signEl.height;
             const previewCtx = getElementById(`preview-${screen}`).getContext("2d");
             const previewWidth = previewCtx.canvas.width, previewHeight = previewCtx.canvas.height;
 
@@ -935,8 +936,8 @@
                 workerScript: gifWorkerScript,
                 workers: 2,
                 quality: 1, // Sample every pixel
-                width: is88x31 ? 88 : signEl.width,
-                height: is88x31 ? 31 : signEl.height
+                width: is88x31 ? 88 : signWidth,
+                height: is88x31 ? 31 : signHeight
             });
             const delay = parseInt(getElementById("play-speed").value);
             const origScreen = currentScreen;
@@ -949,7 +950,6 @@
                     const badgeCtx = badgeCanvas.getContext("2d");
                     const badgeImageData = badgeCtx.createImageData(88, 31);
                     const badgePixels = badgeImageData.data;
-                    const signWidth = signEl.width, signHeight = signEl.height;
                     const signPixels = signCtx.getImageData(0, 0, signWidth, signHeight).data;
 
                     badgeCanvas.width = 88;
