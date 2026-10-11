@@ -509,7 +509,7 @@
             }
             querySelectorAll(`#char-editor-${charCount - 1} ~ .char-editor`).forEach(el => el.remove());
             for (let i = querySelectorAll("#char-editors > .char-editor").length; i < charCount; i++) {
-                getElementById("char-editors").insertAdjacentHTML("beforeend", `
+                getElementById("char-editors").insertAdjacentHTML("beforeend", /* <html> */`
                     <div id="char-editor-${i}" class="char-editor">
                         <fieldset>
                             <textarea tabindex="-1" readonly>${fontCharset[i]}</textarea>
@@ -529,7 +529,7 @@
                             </button>
                         </fieldset>
                     </div>
-                `);
+                `/* </html> */);
                 onEvent(getElementById(`char-textarea-${i}`), "input", e => charTextareaInput(e.target, i));
                 onEvent(getElementById(`move-char-left-${i}`), clickStr, () => {
                     [userFont._editorTexts[i - 1], userFont._editorTexts[i]] = [userFont._editorTexts[i], userFont._editorTexts[i - 1]];
@@ -654,7 +654,7 @@
         let moveDivBody = "", screenDivBody = "", clearDivBody = "", textTableBody = "";
         const sortedFonts = Object.keys(fonts).sort((a, b) => a.localeCompare(b, "en-US", { sensitivity: "base", numeric: true })).concat("UserFont");
         for (let i = 1; i <= 8; i++) {
-            moveDivBody += `
+            moveDivBody += /* <html> */`
                 <span>
                     <button id="move-up-${i}" title="Move screen ${i} up" ${i === 1 ? 'style="visibility: hidden"' : ""}>
                         &#x25B2;
@@ -662,13 +662,13 @@
                         &#x25BC;
                     </button>
                 </span>
-            `;
-            screenDivBody += `
+            `/* </html> */;
+            screenDivBody += /* <html> */`
                 <input type="radio" name="screen" id="screen-${i}" value="${i}" ${i === 1 ? "checked" : ""}>
                 <label for="screen-${i}" title="Switch to screen ${i}"><canvas id="preview-${i}" class="sign-canvas"></canvas></label>
-            `;
+            `/* </html> */;
             clearDivBody += clearBtn.outerHTML.replace('id="clear"', `id="clear-screen-${i}" title="Clear screen ${i}"`);
-            textTableBody += `
+            textTableBody += /* <html> */`
                 <tr id="row-${i}">
                     <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="x-${i}" required></td>
                     <td><input type="number" min="-999" max="999" inputmode="numeric" value="1" id="y-${i}" required></td>
@@ -676,7 +676,7 @@
                     <td><input type="checkbox" id="invert-${i}" title="Invert text"></td>
                     <td><input type="text" id="text-${i}" placeholder="Screen 1 Line ${i}"></td>
                 </tr>
-            `;
+            `/* </html> */;
         }
         querySelector("#move-screens").innerHTML += moveDivBody;
         querySelector("#screen").innerHTML += screenDivBody;
