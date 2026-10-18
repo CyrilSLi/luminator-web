@@ -376,16 +376,22 @@
     <script>
         // %ASYNC_HEADER%
 
-        const getElementById = (id) => document.getElementById(id);
-        const querySelector = (sel) => document.querySelector(sel);
-        const querySelectorAll = (sel) => document.querySelectorAll(sel);
-        const createElement = (tag) => document.createElement(tag);
+        const doc = document;
+        const win = window;
+        const bodyEl = doc.body;
+
+        const getElementById = (id) => doc.getElementById(id);
+        const querySelector = (sel) => doc.querySelector(sel);
+        const querySelectorAll = (sel) => doc.querySelectorAll(sel);
+        const createElement = (tag) => doc.createElement(tag);
         const onEvent = (el, e, fn) => el.addEventListener(e, fn);
 
         const getValue = (el) => el.value;
         const getElValue = (id) => getValue(getElementById(id));
         const getValueInt = (el) => parseInt(getValue(el));
         const getElValueInt = (id) => getValueInt(getElementById(id));
+        const getLength = (el) => el.length;
+
         const setValue = (el, val) => el.value = val;
         const setElValue = (id, val) => setValue(getElementById(id), val);
         const setTextContent = (el, val) => el.textContent = val;
@@ -394,7 +400,6 @@
         const JSONParse = JSON.parse;
         const JSONStringify = JSON.stringify;
 
-        const bodyEl = document.body;
         const downloadBlob = (blob, filename) => {
             const a = createElement("a");
             a.style.display = "none";
@@ -414,7 +419,7 @@
         async function compressBase64(data) {
             const array = new Ui8A(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
             let base64 = "";
-            for (let i = 0; i < array.length; i += 0x4000) {
+            for (let i = 0; i < getLength(array); i += 0x4000) {
                 base64 += String.fromCharCode(...array.subarray(i, i + 0x4000));
             }
             return replaceAll(replaceAll(replaceAll(btoa(base64), "+", "-"), "/", "_"), "=", "");
@@ -422,7 +427,7 @@
 
         async function decompressBase64(base64, isText = false) {
             const data = new Ui8A(await new Response(new Blob([Ui8A.from(
-                atob(replaceAll(replaceAll(base64, "-", "+"), "_", "/") + "=".repeat((4 - base64.length % 4) % 4)), (c) => c.charCodeAt()
+                atob(replaceAll(replaceAll(base64, "-", "+"), "_", "/") + "=".repeat((4 - getLength(base64) % 4) % 4)), (c) => c.charCodeAt()
             )]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
             return isText ? new TextDecoder().decode(data) : data;
         };
@@ -435,7 +440,7 @@
         let signPos;
         let userFont;
 
-        const pageUrl = new URL(window.location.href);
+        const pageUrl = new URL(win.location.href);
         const pageUrlParams = pageUrl.searchParams;
         const clearBtn = getElementById("clear");
         const shareDialog = getElementById("share-dialog");
@@ -447,12 +452,12 @@
 
         if (!isEmbedded) {
             onEvent(signEl, clickStr, () => {
-                if (!document.fullscreenElement) {
+                if (!doc.fullscreenElement) {
                     signEl.requestFullscreen().catch(err => {
                         alert(`Error entering full screen: ${err.message}`);
                     });
                 } else {
-                    document.exitFullscreen();
+                    doc.exitFullscreen();
                 }
             });
         }
@@ -471,7 +476,7 @@
         delete fonts.__charset__;
         Object.values(fonts).forEach(font => {
             font.bitmap = Ui8A.from(atob(font.bitmap), c => c.charCodeAt(0));
-            const numChars = font.pointers.length - 1;
+            const numChars = getLength(font.pointers) - 1;
             font.upperCaseOnly = numChars > fontCharset.indexOf("Z") && numChars <= fontCharset.indexOf("z");
         });
         const lineNums = "1234567890ABCDEFGHIJKLMNOPQRSTUV";
@@ -508,13 +513,13 @@
         });
 
         function renderCharTextareas() {
-            let charCount = userFont._editorTexts.length;
+            let charCount = getLength(userFont._editorTexts);
             if (charCount === 0) {
                 userFont._editorTexts.push(null);
                 charCount = 1;
             }
             querySelectorAll(`#char-editor-${charCount - 1} ~ .char-editor`).forEach(el => el.remove());
-            for (let i = querySelectorAll("#char-editors > .char-editor").length; i < charCount; i++) {
+            for (let i = getLength(querySelectorAll("#char-editors > .char-editor")); i < charCount; i++) {
                 getElementById("char-editors").insertAdjacentHTML("beforeend", /* <html> */`
                     <div id="char-editor-${i}" class="char-editor">
                         <fieldset>
@@ -564,11 +569,11 @@
             userFont._editorTexts[index] = getValue(el);
             const selectionStart = el.selectionStart;
             const lines = getValue(el).split("\n");
-            let maxLineLen = mathLib.max(...lines.slice(0, userFont._height).map(line => line.length), 1);
-            if (lines.length > userFont._height) {
+            let maxLineLen = mathLib.max(...lines.slice(0, userFont._height).map(getLength), 1);
+            if (getLength(lines) > userFont._height) {
                 setValue(el, lines.slice(0, userFont._height).join("\n"));
-            } else if (lines.length < userFont._height) {
-                setValue(el, lines.concat(Array(userFont._height - lines.length).fill("")).join("\n"));
+            } else if (getLength(lines) < userFont._height) {
+                setValue(el, lines.concat(Array(userFont._height - getLength(lines)).fill("")).join("\n"));
             }
             if (maxLineLen > 32) {
                 setValue(el, lines.map(line => line.slice(0, 32)).join("\n"));
@@ -583,8 +588,8 @@
         }
 
         onEvent(getElementById("add-char"), clickStr, () => {
-            if (userFont._editorTexts.length >= fontCharset.length) {
-                alert(`Maximum amount of ${fontCharset.length} characters reached.`);
+            if (getLength(userFont._editorTexts) >= getLength(fontCharset)) {
+                alert(`Maximum amount of ${getLength(fontCharset)} characters reached.`);
                 return;
             }
             userFont._editorTexts.push(null);
@@ -598,7 +603,7 @@
                 return;
             }
             userFont._height = newHeight;
-            for (let i = 0; i < userFont._editorTexts.length; i++) {
+            for (let i = 0; i < getLength(userFont._editorTexts); i++) {
                 getElementById(`char-rowindex-${i}`).style.height = `${newHeight}lh`;
                 setElValue(`char-rowindex-${i}`, lineNums.slice(0, newHeight).split("").join("\n"));
                 getElementById(`char-textarea-${i}`).style.height = `${newHeight}lh`;
@@ -611,22 +616,22 @@
             const bitArray = [];
             userFont._pointers = [];
             userFont._editorTexts.forEach((text, i) => {
-                userFont._pointers.push(bitArray.length / userFont._height);
+                userFont._pointers.push(getLength(bitArray) / userFont._height);
                 if (text == null || text.trim() === "") {
                     return;
                 }
                 const lines = text.split("\n");
-                const maxLineLen = mathLib.max(...lines.map(line => line.length), 1);
+                const maxLineLen = mathLib.max(...lines.map(getLength), 1);
                 for (let col = 0; col < maxLineLen; col++) {
                     for (let row = 0; row < userFont._height; row++) {
                         bitArray.push((lines[row]?.[col] || " ") === " " ? 0 : 1);
                     }
                 }
             });
-            userFont._pointers.push(bitArray.length / userFont._height); // Identify end of bitarray in byte-aligned bitmap
-            const bitmapLen = mathLib.ceil(bitArray.length / 8);
+            userFont._pointers.push(getLength(bitArray) / userFont._height); // Identify end of bitarray in byte-aligned bitmap
+            const bitmapLen = mathLib.ceil(getLength(bitArray) / 8);
             const bitmap = new Ui8A(bitmapLen);
-            for (let i = 0; i < bitArray.length; i++) {
+            for (let i = 0; i < getLength(bitArray); i++) {
                 if (bitArray[i]) {
                     bitmap[mathLib.floor(i / 8)] |= 1 << (7 - (i % 8));
                 }
@@ -644,7 +649,7 @@
 
         function showFontsDialog() {
             userFont._editorTexts = [];
-            for (let char = 0; char < userFont._pointers.length - 1; char++) {
+            for (let char = 0; char < getLength(userFont._pointers) - 1; char++) {
                 const startIndex = userFont._pointers[char] * userFont._height;
                 const endIndex = userFont._pointers[char + 1] * userFont._height;
                 const charText = Array(userFont._height).fill("");
@@ -710,8 +715,8 @@
         };
         emptySignData();
 
-        const screensWithData = () => signData._screens.filter(screen => screen.some(line => line.text !== "")).length;
-        const userFontInUse = () => fonts.UserFont && signData._screens.filter(screen => screen.some(line => line.font === "UserFont")).length > 0;
+        const screensWithData = () => getLength(signData._screens.filter(screen => screen.some(line => line.text !== "")));
+        const userFontInUse = () => fonts.UserFont && getLength(signData._screens.filter(screen => screen.some(line => line.font === "UserFont"))) > 0;
 
         if (isEmbedded) {
             bodyEl.classList.add("embedded");
@@ -756,7 +761,7 @@
                 height: signEl.clientHeight
             }
         }
-        onEvent(window, "resize", resizeSignContainer);
+        onEvent(win, "resize", resizeSignContainer);
 
         function resizeSign() {
             querySelectorAll(".sign-canvas:not(#sign-container > .sign-canvas)").forEach(canvas => {
@@ -836,7 +841,7 @@
             let col = x;
 
             for (const [charIndex, char] of [...str].entries()) {
-                if (!fontCharset.slice(0, pointers.length - 1).includes(char)) {
+                if (!fontCharset.slice(0, getLength(pointers) - 1).includes(char)) {
                     continue;
                 }
                 const startIndex = pointers[fontCharset.indexOf(char)] * height;
@@ -850,7 +855,7 @@
                     }
                 }
 
-                if (charIndex < str.length - 1) {
+                if (charIndex < getLength(str) - 1) {
                     if (invert) {
                         for (let i = 0; i < spacing; i++) {
                             for (let j = 0; j < height; j++) {
@@ -1112,7 +1117,7 @@
                 this._data.push((value >> 8) & 0xFF, value & 0xFF);
             }
             _string(value) {
-                this._uint8(value.length);
+                this._uint8(getLength(value));
                 this._data.push(...value.split("").map(c => c.charCodeAt(0)));
             }
             _select(id) {
@@ -1160,7 +1165,7 @@
                 getElementById(id).selectedIndex = this._uint8();
             }
             _optionalObjects() {
-                while (this.offset < this._data.length) {
+                while (this.offset < getLength(this._data)) {
                     const objectName = Object.keys(optionalObjSerDes)[this._uint8()];
                     optionalObjSerDes[objectName][1](this);
                 }
@@ -1170,9 +1175,9 @@
         function serializeUserFont(ser) {
             ser._uint8(userFont._height);
             ser._uint8(userFont._spacing);
-            ser._uint8(userFont._pointers.length);
+            ser._uint8(getLength(userFont._pointers));
             userFont._pointers.forEach(pointer => ser._int16(pointer));
-            ser._int16(userFont._bitmap.length);
+            ser._int16(getLength(userFont._bitmap));
             userFont._bitmap.forEach(byte => ser._uint8(byte));
         }
 
@@ -1258,15 +1263,15 @@
             deserializeSign(pageUrlParams.get("data"));
             pageUrlParams.delete("data");
             if (!isEmbedded) {
-                window.history.replaceState({}, "", pageUrl.href);
+                win.history.replaceState({}, "", pageUrl.href);
             }
         }
 
-        onEvent(window, "paste", async e => {
+        onEvent(win, "paste", async e => {
             if (querySelector("dialog[open]")) {
                 return; // Don't paste into the editor if a dialog is open
             }
-            const pastedData = (e.clipboardData || window.clipboardData).getData("text");
+            const pastedData = (e.clipboardData || win.clipboardData).getData("text");
             [
                 ["lh-editor-screen-data://", des => {
                     const screen = deserializeScreen(des);
@@ -1285,7 +1290,7 @@
             ].forEach(([prefix, callback]) => {
                 if (pastedData.startsWith(prefix)) {
                     e.preventDefault();
-                    Deserializer._deserialize(pastedData.slice(prefix.length)).then(des => {
+                    Deserializer._deserialize(pastedData.slice(getLength(prefix))).then(des => {
                         if (!des.versionValid) {
                             return;
                         }
@@ -1347,7 +1352,7 @@
             const reader = new FileReader();
             reader.onload = e => {
                 const lines = e.target.result.split(/\r?\n/).map(line => line.trim()).filter(line => line !== "");
-                if (lines.length !== 66) {
+                if (getLength(lines) !== 66) {
                     alert("ERROR: Invalid sign data file.");
                     return;
                 }
@@ -1377,7 +1382,7 @@
         onEvent(getElementById("import-file"), "change", importFile);
 
         if (!isEmbedded) {
-            onEvent(window, "beforeunload", e => {
+            onEvent(win, "beforeunload", e => {
                 if (screensWithData() > 0) {
                     e.preventDefault();
                     e.returnValue = "";
