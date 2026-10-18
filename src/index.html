@@ -384,10 +384,15 @@
 
         const getValue = (el) => el.value;
         const getElValue = (id) => getValue(getElementById(id));
-        const getValueInt = (el) => parseInt(el.value);
+        const getValueInt = (el) => parseInt(getValue(el));
         const getElValueInt = (id) => getValueInt(getElementById(id));
         const setValue = (el, val) => el.value = val;
         const setElValue = (id, val) => setValue(getElementById(id), val);
+        const setTextContent = (el, val) => el.textContent = val;
+
+        const replaceAll = (str, pattern, replacement) => str.replaceAll(pattern, replacement);
+        const JSONParse = JSON.parse;
+        const JSONStringify = JSON.stringify;
 
         const bodyEl = document.body;
         const downloadBlob = (blob, filename) => {
@@ -402,21 +407,22 @@
 
         const mathLib = Math;
         const clickStr = "click";
+        const Ui8A = Uint8Array;
 
         let signWidth, signHeight;
 
         async function compressBase64(data) {
-            const array = new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+            const array = new Ui8A(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
             let base64 = "";
             for (let i = 0; i < array.length; i += 0x4000) {
                 base64 += String.fromCharCode(...array.subarray(i, i + 0x4000));
             }
-            return btoa(base64).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+            return replaceAll(replaceAll(replaceAll(btoa(base64), "+", "-"), "/", "_"), "=", "");
         }
 
         async function decompressBase64(base64, isText = false) {
-            const data = new Uint8Array(await new Response(new Blob([Uint8Array.from(
-                atob(base64.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - base64.length % 4) % 4)), (c) => c.charCodeAt()
+            const data = new Ui8A(await new Response(new Blob([Ui8A.from(
+                atob(replaceAll(replaceAll(base64, "-", "+"), "_", "/") + "=".repeat((4 - base64.length % 4) % 4)), (c) => c.charCodeAt()
             )]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
             return isText ? new TextDecoder().decode(data) : data;
         };
@@ -454,8 +460,8 @@
         onEvent(signEl, "mousemove", e => {
             const x = (e.clientX - signPos.left) / signPos.width * signWidth;
             const y = (e.clientY - signPos.top) / signPos.height * signHeight;
-            getElementById("mouse-x").textContent = mathLib.max(1, mathLib.min(mathLib.floor((x + 1) / 6) + 1, signData._width));
-            getElementById("mouse-y").textContent = mathLib.max(1, mathLib.min(mathLib.floor((y + 1) / 6) + 1, signData._height));
+            setTextContent(getElementById("mouse-x"), mathLib.max(1, mathLib.min(mathLib.floor((x + 1) / 6) + 1, signData._width)));
+            setTextContent(getElementById("mouse-y"), mathLib.max(1, mathLib.min(mathLib.floor((y + 1) / 6) + 1, signData._height)));
         });
         onEvent(signEl, "mouseenter", () => getElementById("mouse-pos").removeAttribute("hidden"));
         onEvent(signEl, "mouseleave", () => getElementById("mouse-pos").setAttribute("hidden", ""));
@@ -464,7 +470,7 @@
         const fontCharset = fonts.__charset__;
         delete fonts.__charset__;
         Object.values(fonts).forEach(font => {
-            font.bitmap = Uint8Array.from(atob(font.bitmap), c => c.charCodeAt(0));
+            font.bitmap = Ui8A.from(atob(font.bitmap), c => c.charCodeAt(0));
             const numChars = font.pointers.length - 1;
             font.upperCaseOnly = numChars > fontCharset.indexOf("Z") && numChars <= fontCharset.indexOf("z");
         });
@@ -544,7 +550,7 @@
                     renderCharTextareas();
                 });
             }
-            getElementById("char-count").textContent = charCount;
+            setTextContent(getElementById("char-count"), charCount);
             for (let i = 0; i < charCount; i++) {
                 const textareaEl = getElementById(`char-textarea-${i}`);
                 if (getValue(textareaEl) !== userFont._editorTexts[i]) {
@@ -619,7 +625,7 @@
             });
             userFont._pointers.push(bitArray.length / userFont._height); // Identify end of bitarray in byte-aligned bitmap
             const bitmapLen = mathLib.ceil(bitArray.length / 8);
-            const bitmap = new Uint8Array(bitmapLen);
+            const bitmap = new Ui8A(bitmapLen);
             for (let i = 0; i < bitArray.length; i++) {
                 if (bitArray[i]) {
                     bitmap[mathLib.floor(i / 8)] |= 1 << (7 - (i % 8));
@@ -693,7 +699,7 @@
             text: ""
         };
         const emptySignData = () => {
-            signData = JSON.parse(JSON.stringify({ _screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
+            signData = JSONParse(JSONStringify({ _screens: Array(8).fill(Array(8).fill(emptyScreenData)) }));
             setElValue("size", "16x160");
             updateGlobalAttr("size", "16x160");
             setElValue("color", "amber");
@@ -923,7 +929,7 @@
                 clearInterval(playSignInterval);
                 playSignInterval = null;
                 getElementById("controls").removeAttribute("data-playing");
-                getElementById("play-pause").textContent = "Play";
+                setTextContent(getElementById("play-pause"), "Play");
             } else {
                 if (screensWithData() < 2) {
                     if (isEmbedded) {
@@ -935,7 +941,7 @@
                 getElementById("controls").setAttribute("data-playing", "true");
                 changeScreen(nextNonEmptyScreen(currentScreen - 1));
                 playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), getElValueInt("play-speed"));
-                getElementById("play-pause").textContent = "Pause";
+                setTextContent(getElementById("play-pause"), "Pause");
             }
         }
         onEvent(getElementById("play-pause"), clickStr, playPauseSign);
@@ -1065,7 +1071,7 @@
             onEvent(getElementById(`move-up-${i}`), clickStr, () => moveScreenUp(i));
             onEvent(getElementById(`move-down-${i}`), clickStr, () => moveScreenDown(i));
             onEvent(getElementById(`clear-screen-${i}`), clickStr, () => {
-                signData._screens[i - 1] = JSON.parse(JSON.stringify(Array(8).fill(emptyScreenData)));
+                signData._screens[i - 1] = JSONParse(JSONStringify(Array(8).fill(emptyScreenData)));
                 if (currentScreen === i) {
                     changeScreen(currentScreen); // Update UI
                 }
@@ -1117,7 +1123,7 @@
                 optionalObjSerDes[objectName][0](this);
             }
             async _serialize() {
-                return compressBase64(new Uint8Array(this._data));
+                return compressBase64(new Ui8A(this._data));
             }
         }
         class Deserializer {
@@ -1174,7 +1180,7 @@
             userFont._height = des._uint8();
             userFont._spacing = des._uint8();
             userFont._pointers = Array(des._uint8()).fill().map(() => des._int16());
-            userFont._bitmap = Uint8Array.from(Array(des._int16()).fill().map(() => des._uint8()));
+            userFont._bitmap = Ui8A.from(Array(des._int16()).fill().map(() => des._uint8()));
             fonts["UserFont"] = {
                 height: userFont._height,
                 spacing: userFont._spacing,
@@ -1309,15 +1315,15 @@
         ["share-url", "embed-code", "current-screen", "user-font"].forEach(id => {
             onEvent(getElementById(`copy-${id}`), clickStr, e => {
                 navigator.clipboard.writeText(getElValue(id)).then(() => {
-                    e.target.textContent = "Copied!";
-                    setTimeout(() => e.target.textContent = "Copy", 1000);
+                    setTextContent(e.target, "Copied!");
+                    setTimeout(() => setTextContent(e.target, "Copy"), 1000);
                 });
             });
         });
         onEvent(getElementById("close-share"), clickStr, () => shareDialog.close());
 
         function exportFile() {
-            const esc = str => `"${str.replaceAll('"', '\\"')}"`;
+            const esc = str => `"${replaceAll(str, '"', '\\"')}"`;
             let fileStr = esc(getElValue("name1")) + "\n" + esc(getElValue("name2"));
             for (let screen = 0; screen < 8; screen++) {
                 for (let line = 0; line < 8; line++) {
@@ -1330,7 +1336,7 @@
         onEvent(getElementById("export"), clickStr, exportFile);
 
         function importFile() {
-            const unEsc = str => str.slice(1, -1).replaceAll('\\"', '"');
+            const unEsc = str => replaceAll(str.slice(1, -1), '\\"', '"');
             const file = getElementById("import-file").files[0];
             if (!file) {
                 return;
@@ -1348,19 +1354,19 @@
                 emptySignData();
                 const signCode = file.name.match(/^\d{1,4}.txt$/);
                 if (signCode) {
-                    setElValue("sign-code", parseInt(signCode[0]));
+                    setElValue("sign-code", signCode[0]);
                 }
                 setElValue("name1", unEsc(lines[0]));
                 setElValue("name2", unEsc(lines[1]));
-                for (let screen = 0; screen < 8; screen++) {
-                    for (let line = 0; line < 8; line++) {
-                        const lineData = lines[2 + screen * 8 + line].split(",");
-                        signData._screens[screen][line].text = unEsc(lineData[0]);
-                        signData._screens[screen][line].x = parseInt(lineData[1]);
-                        signData._screens[screen][line].y = parseInt(lineData[2]);
-                        signData._screens[screen][line].font = sortedFonts.includes(unEsc(lineData[3])) ? unEsc(lineData[3]) : defaultFont;
-                        signData._screens[screen][line].invert = lineData[4] === "1";
-                    }
+                for (let line = 0; line < 64; line++) {
+                    const lineData = JSONParse(`[${lines[2 + line]}]`); // use JSON.parse to handle quoted CSV
+                    signData._screens[line >> 3][line & 7] = { // Math.floor(line / 8) = screen, line % 8 = line
+                        text: lineData[0],
+                        x: lineData[1],
+                        y: lineData[2],
+                        font: sortedFonts.includes(lineData[3]) ? lineData[3] : defaultFont,
+                        invert: !!lineData[4]
+                    };
                 }
                 changeScreen(1);
                 renderSign();

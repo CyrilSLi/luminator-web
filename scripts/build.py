@@ -13,15 +13,17 @@ with open(abs_path("../src/index.html")) as f:
 with open(abs_path("../src/fonts.json")) as f:
     fonts_json = f.read()
     dev_html = dev_html.replace('"%FONTS_JSON%"', fonts_json)
-    index_html = index_html.replace('"%FONTS_JSON%"', f'JSON.parse(await decompressBase64("{compress_base64(fonts_json)}", true))')
+    index_html = index_html.replace('"%FONTS_JSON%"', f'JSONParse(await decompressBase64("{compress_base64(fonts_json)}", true))')
 
 with open(abs_path("../src/gif.js")) as f:
     gif_js = f.read()
     dev_html = dev_html.replace('"%GIF_JS%"', gif_js)
-    index_html = index_html.replace('"%GIF_JS%"', '''const script = document.createElement("script");
-                script.textContent = await decompressBase64("%GIF_JS%", true);
-                document.body.appendChild(script);
-                script.remove()'''.replace("%GIF_JS%", compress_base64(gif_js)))
+    index_html = index_html.replace('"%GIF_JS%"', '''
+                const script = createElement("script");
+                setTextContent(script, await decompressBase64("%GIF_JS%", true));
+                bodyEl.appendChild(script);
+                script.remove()
+    '''.strip().replace("%GIF_JS%", compress_base64(gif_js)))
 
 with open(abs_path("../src/gif.worker.js")) as f:
     gif_worker_js = f.read()
