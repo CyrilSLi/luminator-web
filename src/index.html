@@ -380,6 +380,9 @@
         const win = window;
         const bodyEl = doc.body;
 
+        const userFontPrefix = "lh-editor-user-font://";
+        const screenDataPrefix = "lh-editor-screen-data://";
+
         const getElementById = (id) => doc.getElementById(id);
         const querySelector = (sel) => doc.querySelector(sel);
         const querySelectorAll = (sel) => doc.querySelectorAll(sel);
@@ -1072,16 +1075,18 @@
             renderSign();
         }
 
+        function clearScreen(screen) {
+            signData._screens[screen - 1] = JSONParse(JSONStringify(Array(8).fill(emptyScreenData)));
+            if (currentScreen === screen) {
+                changeScreen(currentScreen); // Update UI
+            }
+            renderScreen(screen);
+        }
+
         for (let i = 8; i >= 1; i--) {
             onEvent(getElementById(`move-up-${i}`), clickStr, () => moveScreenUp(i));
             onEvent(getElementById(`move-down-${i}`), clickStr, () => moveScreenDown(i));
-            onEvent(getElementById(`clear-screen-${i}`), clickStr, () => {
-                signData._screens[i - 1] = JSONParse(JSONStringify(Array(8).fill(emptyScreenData)));
-                if (currentScreen === i) {
-                    changeScreen(currentScreen); // Update UI
-                }
-                renderScreen(i);
-            });
+            onEvent(getElementById(`clear-screen-${i}`), clickStr, () => clearScreen(i));
             onEvent(getElementById(`x-${i}`), "input", () => updateLineAttr(i, "x", getElValueInt(`x-${i}`)));
             onEvent(getElementById(`y-${i}`), "input", () => updateLineAttr(i, "y", getElValueInt(`y-${i}`)));
             onEvent(getElementById(`font-${i}`), "change", () => {
@@ -1127,14 +1132,14 @@
                 this._uint8(Object.keys(optionalObjSerDes).indexOf(objectName));
                 optionalObjSerDes[objectName][0](this);
             }
-            async _serialize() {
-                return compressBase64(new Ui8A(this._data));
+            async _serialize(prefix = "") {
+                return prefix + await compressBase64(new Ui8A(this._data));
             }
         }
         class Deserializer {
             constructor(data) {
                 this._data = data;
-                this.offset = 0;
+                this._offset = 0;
                 const dataVersion = this._uint8();
                 if (dataVersion !== serializationVersion) {
                     this.versionValid = false;
@@ -1150,22 +1155,22 @@
                 return this._uint8() === 1;
             }
             _uint8() {
-                return this._data[this.offset++];
+                return this._data[this._offset++];
             }
             _int16() {
-                return ((this._data[this.offset++] << 8) | this._data[this.offset++]) << 16 >> 16;
+                return ((this._data[this._offset++] << 8) | this._data[this._offset++]) << 16 >> 16;
             }
             _string() {
                 const length = this._uint8();
-                const value = String.fromCharCode(...this._data.slice(this.offset, this.offset + length));
-                this.offset += length;
+                const value = String.fromCharCode(...this._data.slice(this._offset, this._offset + length));
+                this._offset += length;
                 return value;
             }
             _select(id) {
                 getElementById(id).selectedIndex = this._uint8();
             }
             _optionalObjects() {
-                while (this.offset < getLength(this._data)) {
+                while (this._offset < getLength(this._data)) {
                     const objectName = Object.keys(optionalObjSerDes)[this._uint8()];
                     optionalObjSerDes[objectName][1](this);
                 }
@@ -1267,13 +1272,28 @@
             }
         }
 
+        async function copyCutHandler(e, cut = false) {
+            if (["text", "number", "checkbox"].includes(document.activeElement?.type)) {
+                return; // Don't copy from input fields
+            }
+            e.preventDefault();
+            const screenSer = new Serializer();
+            serializeScreen(screenSer, signData._screens[currentScreen - 1]);
+            if (cut) {
+                clearScreen(currentScreen);
+            }
+            await navigator.clipboard.writeText(await screenSer._serialize(screenDataPrefix));
+        }
+        onEvent(win, "copy", copyCutHandler);
+        onEvent(win, "cut", e => copyCutHandler(e, true));
+
         onEvent(win, "paste", async e => {
             if (querySelector("dialog[open]")) {
                 return; // Don't paste into the editor if a dialog is open
             }
             const pastedData = (e.clipboardData || win.clipboardData).getData("text");
             [
-                ["lh-editor-screen-data://", des => {
+                [screenDataPrefix, des => {
                     const screen = deserializeScreen(des);
                     if (screen.some(line => line.font === "UserFont") && !fonts.UserFont) {
                         alert("ERROR: Please paste or create a UserFont before loading a screen using it.");
@@ -1283,7 +1303,7 @@
                     changeScreen(currentScreen);
                     renderScreen();
                 }],
-                ["lh-editor-user-font://", des => {
+                [userFontPrefix, des => {
                     deserializeUserFont(des);
                     showFontsDialog();
                 }]
@@ -1306,11 +1326,13 @@
             setElValue("embed-code", `<iframe src="${pageUrl.href}&embed=" width="${signData._width}" height="${signData._height}" style="border: none; width: 100%; height: auto; aspect-ratio: ${signData._width} / ${signData._height};" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>`);
             const screenSer = new Serializer();
             serializeScreen(screenSer, signData._screens[currentScreen - 1]);
-            setElValue("current-screen", `lh-editor-screen-data://${await screenSer._serialize()}`);
+            // setElValue("current-screen", `lh-editor-screen-data://${await screenSer._serialize()}`);
+            setElValue("current-screen", screenSer._serialize(screenDataPrefix));
             if (userFontInUse()) {
                 const userFontSer = new Serializer();
                 serializeUserFont(userFontSer);
-                setElValue("user-font", `lh-editor-user-font://${await userFontSer._serialize()}`);
+                // setElValue("user-font", `lh-editor-user-font://${await userFontSer._serialize()}`);
+                setElValue("user-font", userFontSer._serialize(userFontPrefix));
             } else {
                 setElValue("user-font", "");
             }
@@ -1328,6 +1350,9 @@
         onEvent(getElementById("close-share"), clickStr, () => shareDialog.close());
 
         function exportFile() {
+            if (!confirm("File export provided for compatibility and does not save all sign data. Consider saving a share link instead. Continue?")) {
+                return;
+            }
             const esc = str => `"${replaceAll(str, '"', '\\"')}"`;
             let fileStr = esc(getElValue("name1")) + "\n" + esc(getElValue("name2"));
             for (let screen = 0; screen < 8; screen++) {
