@@ -391,6 +391,7 @@
         const querySelector = (sel) => doc.querySelector(sel);
         const querySelectorAll = (sel) => doc.querySelectorAll(sel);
         const createElement = (tag) => doc.createElement(tag);
+        const activeElement = () => doc.activeElement;
 
         const onEvent = (el, e, fn) => isEmbedded || el.addEventListener(e, fn);
         const preventDefault = (e) => e.preventDefault();
@@ -443,7 +444,7 @@
             return isText ? new TextDecoder().decode(data) : data;
         };
 
-        const isInputFocused = () => ["text", "number", "checkbox", "textarea"].includes(doc.activeElement?.type) || querySelector("dialog[open]");
+        const isInputFocused = () => ["text", "number", "checkbox", "textarea"].includes(activeElement()?.type) || querySelector("dialog[open]");
 
         const fonts = "%FONTS_JSON%";
         getElementById("header-group").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
@@ -951,6 +952,7 @@
                     }
                     return;
                 }
+                activeElement().blur(); // Prevent currently focused element from being edited while sign is playing
                 getElementById("controls").setAttribute("data-playing", "true");
                 changeScreen(nextNonEmptyScreen(currentScreen - 1));
                 playSignInterval = setInterval(() => changeScreen(nextNonEmptyScreen(currentScreen)), getElValueInt("play-speed"));
@@ -1432,7 +1434,7 @@
         const modifier = (navigator.userAgentData?.platform || navigator.platform || "").toUpperCase().includes("MAC") ? "metaKey" : "ctrlKey";
         onEvent(doc, "keydown", e => {
             if (!e[modifier] || e.repeat) {
-                const activeEl = doc.activeElement;
+                const activeEl = activeElement();
                 if (isInputFocused() && e.key === "Escape" && !e.shiftKey) {
                     activeEl.blur();
                 } else if (!isInputFocused() && startsWith(e.code, "Digit")) {
