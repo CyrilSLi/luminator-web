@@ -409,6 +409,9 @@
         const JSONParse = JSON.parse;
         const JSONStringify = JSON.stringify;
 
+        const slice = (x, ...args) => x.slice(...args);
+        const startsWith = (str, prefix) => str.startsWith(prefix);
+
         const downloadBlob = (blob, filetype) => {
             const a = createElement("a");
             a.style.display = "none";
@@ -440,7 +443,7 @@
             return isText ? new TextDecoder().decode(data) : data;
         };
 
-        const isInputFocused = () => ["text", "number", "checkbox", "textarea"].includes(document.activeElement?.type) || querySelector("dialog[open]");
+        const isInputFocused = () => ["text", "number", "checkbox", "textarea"].includes(doc.activeElement?.type) || querySelector("dialog[open]");
 
         const fonts = "%FONTS_JSON%";
         getElementById("header-group").insertAdjacentHTML("beforeend", "%512KB_CLUB%");
@@ -527,7 +530,7 @@
                             <textarea tabindex="-1" id="char-colindex-${i}" wrap="off" readonly>1</textarea>
                         </fieldset>
                         <fieldset>
-                            <textarea tabindex="-1" id="char-rowindex-${i}" style="height: ${userFont._height}lh;" readonly>${lineNums.slice(0, userFont._height).split("").join("\n")}</textarea>
+                            <textarea tabindex="-1" id="char-rowindex-${i}" style="height: ${userFont._height}lh;" readonly>${slice(lineNums, 0, userFont._height).split("").join("\n")}</textarea>
                             <textarea class="char-textarea"id="char-textarea-${i}" wrap="off" style="height: ${userFont._height}lh;"></textarea>
                         </fieldset>
                         <fieldset>
@@ -569,20 +572,20 @@
             userFont._editorTexts[index] = getValue(el);
             const selectionStart = el.selectionStart;
             const lines = getValue(el).split("\n");
-            let maxLineLen = mathLib.max(...lines.slice(0, userFont._height).map(getLength), 1);
+            let maxLineLen = mathLib.max(...slice(lines, 0, userFont._height).map(getLength), 1);
             if (getLength(lines) > userFont._height) {
-                setValue(el, lines.slice(0, userFont._height).join("\n"));
+                setValue(el, slice(lines, 0, userFont._height).join("\n"));
             } else if (getLength(lines) < userFont._height) {
                 setValue(el, lines.concat(Array(userFont._height - getLength(lines)).fill("")).join("\n"));
             }
             if (maxLineLen > 32) {
-                setValue(el, lines.map(line => line.slice(0, 32)).join("\n"));
+                setValue(el, lines.map(line => slice(line, 0, 32)).join("\n"));
                 maxLineLen = 32;
             }
             el.style.width = "auto";
             el.style.width = `calc((1ch + 6.4px) * ${maxLineLen})`;
             const colIndexEl = getElementById(`char-colindex-${index}`);
-            setValue(colIndexEl, lineNums.slice(0, maxLineLen));
+            setValue(colIndexEl, slice(lineNums, 0, maxLineLen));
             colIndexEl.style.width = `calc((1ch + 6.4px) * ${maxLineLen})`;
             el.setSelectionRange(selectionStart, selectionStart);
         }
@@ -605,7 +608,7 @@
             userFont._height = newHeight;
             for (let i = 0; i < getLength(userFont._editorTexts); i++) {
                 getElementById(`char-rowindex-${i}`).style.height = `${newHeight}lh`;
-                setElValue(`char-rowindex-${i}`, lineNums.slice(0, newHeight).split("").join("\n"));
+                setElValue(`char-rowindex-${i}`, slice(lineNums, 0, newHeight).split("").join("\n"));
                 getElementById(`char-textarea-${i}`).style.height = `${newHeight}lh`;
                 charTextareaInput(getElementById(`char-textarea-${i}`), i);
             }
@@ -847,7 +850,7 @@
             let col = x;
 
             for (const [charIndex, char] of [...str].entries()) {
-                if (!fontCharset.slice(0, getLength(pointers) - 1).includes(char)) {
+                if (!slice(fontCharset, 0, getLength(pointers) - 1).includes(char)) {
                     continue;
                 }
                 const startIndex = pointers[fontCharset.indexOf(char)] * height;
@@ -994,7 +997,7 @@
                     badgeCtx.fillRect(0, 0, badgeCanvas.width, badgeCanvas.height);
                     for (let signY = 0, badgeY = 1; badgeY < 30; signY += 2, badgeY++) {
                         for (let signX = 0, badgeX = 1; badgeX < 87; signX += 2, badgeX++) {
-                            badgePixels.set(signPixels.slice((signY * signWidth + signX) * 4, (signY * signWidth + signX + 1) * 4), (badgeY * 88 + badgeX) * 4);
+                            badgePixels.set(slice(signPixels, (signY * signWidth + signX) * 4, (signY * signWidth + signX + 1) * 4), (badgeY * 88 + badgeX) * 4);
                         }
                     }
                     badgeCtx.putImageData(badgeImageData, 0, 0);
@@ -1173,7 +1176,7 @@
             }
             _string() {
                 const length = this._uint8();
-                const value = String.fromCharCode(...this._data.slice(this._offset, this._offset + length));
+                const value = String.fromCharCode(...slice(this._data, this._offset, this._offset + length));
                 this._offset += length;
                 return value;
             }
@@ -1319,9 +1322,9 @@
                     showFontsDialog();
                 }]
             ].forEach(([prefix, callback]) => {
-                if (pastedData.startsWith(prefix)) {
+                if (startsWith(pastedData, prefix)) {
                     preventDefault(e);
-                    Deserializer._deserialize(pastedData.slice(getLength(prefix))).then(des => {
+                    Deserializer._deserialize(slice(pastedData, getLength(prefix))).then(des => {
                         if (!des.versionValid) {
                             return;
                         }
@@ -1381,7 +1384,7 @@
         onEvent(getElementById("export"), clickStr, exportFile);
 
         function importFile() {
-            const unEsc = str => replaceAll(str.slice(1, -1), '\\"', '"');
+            const unEsc = str => replaceAll(slice(str, 1, -1), '\\"', '"');
             const file = getElementById("import-file").files[0];
             if (!file) {
                 return;
@@ -1392,8 +1395,8 @@
             const reader = new FileReader();
             reader.onload = e => {
                 const content = e.target.result.trim();
-                if (content.startsWith(shareDownloadPrefix)) {
-                    deserializeSign(new URL(content.slice(getLength(shareDownloadPrefix))).searchParams.get("data"));
+                if (startsWith(content, shareDownloadPrefix)) {
+                    deserializeSign(new URL(slice(content, getLength(shareDownloadPrefix))).searchParams.get("data"));
                     return;
                 }
                 const lines = content.split(/\r?\n/).map(line => line.trim()).filter(line => line !== "");
@@ -1429,10 +1432,11 @@
         const modifier = (navigator.userAgentData?.platform || navigator.platform || "").toUpperCase().includes("MAC") ? "metaKey" : "ctrlKey";
         onEvent(doc, "keydown", e => {
             if (!e[modifier] || e.repeat) {
+                const activeEl = doc.activeElement;
                 if (isInputFocused() && e.key === "Escape" && !e.shiftKey) {
-                    document.activeElement.blur();
-                } else if (!isInputFocused() && e.code.startsWith("Digit")) {
-                    const digit = e.code.slice(5);
+                    activeEl.blur();
+                } else if (!isInputFocused() && startsWith(e.code, "Digit")) {
+                    const digit = slice(e.code, 5);
                     if (!playSignInterval && digit >= 1 && digit <= 8) { // Do not allow switching screens while playing
                         preventDefault(e);
                         if (e.shiftKey) {
@@ -1441,6 +1445,12 @@
                             changeScreen(digit);
                             getElementById("screen-" + digit).focus();
                         }
+                    }
+                } else if (startsWith(activeEl.id, "text-")) {
+                    const moveDir = { ArrowUp: 6, ArrowDown: 8, Enter: 8 }[e.key]; // Account for modulo calculation
+                    if (moveDir) {
+                        preventDefault(e);
+                        getElementById(`text-${(+slice(activeEl.id, 5) + moveDir) % 8 + 1}`).focus();
                     }
                 }
                 return;
