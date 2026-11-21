@@ -14,6 +14,20 @@ A local web-based editor for transit destination signs, emulating the Luminator 
 - A custom font editor to display icons and other symbols, with data saved in the sign's share link or as a separate font share link.
 - Sign sizes are the same as the Luminator Horizon line, in addition to a 88x31 size for web buttons (pixel size: 29x10).
 
+## Keyboard Shortcuts
+
+**Note:** Use `Cmd` instead of `Ctrl` on macOS.
+
+- Up/Down Arrow - Move between screens or text lines
+- `1` through `8` - Select a screen
+- `Shift + 1` through `Shift + 8` - Select a text line
+- `Ctrl + S` - Open the share/export dialog
+- `Ctrl + Shift + S` - Export sign as CSV
+- `Ctrl + O` - Import from share link file or CSV
+- `Ctrl + P` - Play/pause sign
+- `Ctrl + Shift + P` - Play/pause sign in fullscreen
+- `Ctrl + G` - Export sign as GIF image
+
 ## Build
 
 1. Install `html-minifier-next <8.8.0`:
