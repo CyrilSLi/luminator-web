@@ -1,8 +1,14 @@
-# Luminator Horizon Web Editor
+# Luminator Horizon Web Editor (unofficial)
 
 A local web-based editor for transit destination signs, emulating the Luminator Horizon line of monochrome LED signs.
 
 [![Demo sign GIF](src/demo.gif)](https://cyrilsli.github.io/luminator-web/?data=eJztz7sKwkAQheEZBQU7C0VBdCorL8-geAtEI4kg2K3JEhfHrOxGJW_pI4napkhh6Wn-8uNg9YnwXRnKdSy5K-gAVqGx8nzn4G2IiPbzKc1nzs7zoQ21ClCYGcWW1ShW6el2HCk95ttFJSLVZviQR3ABEUq7NSBgEyA_hcDWG-xtWWRkVZwMKBB3SUtnMaDgJIwkVsn5h97nYHfCTKxDwZyRTbWREfXpanQorZVRMe6f3LwAOaE-Rw)
+
+This project is not affiliated with Luminator Technology Group, and is not intended for use with real Luminator signs or software. All trademarks and copyright belong to their respective owners.
+
+## Usage
+
+Visit [https://cyrilsli.github.io/luminator-web/](https://cyrilsli.github.io/luminator-web/) or download the `index.html` file to use locally in a web browser. The app is under 100KB uncompressed and runs fully offline with no external dependencies.
 
 ## Features
 
@@ -35,12 +41,25 @@ A local web-based editor for transit destination signs, emulating the Luminator 
     ```bash
     sudo npm install -g html-minifier-next@8.7.0
     ```
+
 2. Extract fonts from a `.ips` IPS project file using `mdb-export` (part of MDB Tools):
 
     ```bash
     mdb-export path/to/project.ips Fonts > data/fonts
     python scripts/extract_fonts.py data/fonts -c
     ```
+
+    This will save the font data to `src/fonts.json`.
+
+    If you want to combine fonts from multiple `.ips` files, only use the `-c` (clear) option on the first file. For example:
+
+    ```bash
+    mdb-export path/to/project1.ips Fonts > data/fonts
+    python scripts/extract_fonts.py data/fonts -c
+    mdb-export path/to/project2.ips Fonts > data/fonts2
+    python scripts/extract_fonts.py data/fonts2
+    ```
+
 3. Build the compressed HTML file:
 
     ```bash
@@ -49,4 +68,14 @@ A local web-based editor for transit destination signs, emulating the Luminator 
 
 `index.html` is the compressed, asynchronously loaded single-page web app, `index.dev.html` is the uncompressed, synchronous version for development, and `src/index.unmin.html` is the uncompressed, asynchronously loaded version for debugging.
 
-This project is not affiliated with Luminator Technology Group, and is not intended for use with real Luminator signs or software. All trademarks and copyright belong to their respective owners.
+## Extract fonts from an IPS software installer
+
+1. Unzip the installer package if necessary.
+2. Use `unshield` to extract the contents of `.cab` files:
+
+    ```bash
+    unshield -d data1 path/to/installer/data1.cab
+    unshield -d data2 path/to/installer/data2.cab
+    ```
+
+    The `.ips` project files are located at `data1/IPS/IPS.ips` and `data2/IPS/IPS.ips`. They should be identical, verify using `sha256sum` or similar. Use one of the `.ips` files to extract fonts as described [above](#build).
